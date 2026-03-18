@@ -1,0 +1,3012 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"need_response\": true,\n  \"message\": \"Suite à votre réponse, je préfère être honnête avec vous...\",\n  \"new_status\": \"revealed\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        4032,
+        5152
+      ],
+      "id": "826dcd51-5722-4d92-9e36-0f0983411ff0",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        3792,
+        5104
+      ],
+      "id": "c9d82f26-5a0f-4879-b299-20a5326d2c5e",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "TOkiQ2I0OfMQZ5z2",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://fimedehqtcpijcfjunlh.supabase.co/rest/v1/rpc/find_conversation_by_email",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_sender_email\": \"{{ $json.from.value[0].address }}\",\n  \"p_to_email\": \"{{ $json.to.value[0].address }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1728,
+        4240
+      ],
+      "id": "eef85227-716c-4dc8-8356-c856c67747e2",
+      "name": "Find_conversation_by_email3",
+      "credentials": {
+        "supabaseApi": {
+          "id": "aZiXU9v9dYP2TIfw",
+          "name": "Supabase_el-prospector"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://fimedehqtcpijcfjunlh.supabase.co/rest/v1/rpc/process_agency_response",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_conversation_id\": \"{{ $('Get_info_find_conversation_by_email').first().json.conversation_id }}\",\n  \"p_outbound_content\": {{ JSON.stringify($('Agent_révélation1').item.json.output.message) }},\n  \"p_new_status\": \"{{ $('Agent_révélation1').item.json.output.new_status }}\",\n  \"p_gmail_message_id\": \"{{ $json.id }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        5136,
+        4896
+      ],
+      "id": "2763bfb3-67ac-4553-937a-e1d8bb48d20e",
+      "name": "Process_agency_response3",
+      "credentials": {
+        "supabaseApi": {
+          "id": "aZiXU9v9dYP2TIfw",
+          "name": "Supabase_el-prospector"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "09f7cd7e-26b4-4e69-9801-74c7b8f9f75d",
+              "leftValue": "={{ $json.relevant }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1872,
+        4240
+      ],
+      "id": "c22f67a1-a462-4e76-99b0-e17703369bb9",
+      "name": "If_find_conv1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "77d9e282-33d9-4abd-9095-8a44c7c5ac81",
+              "leftValue": "={{ $json.output.need_response }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4144,
+        4960
+      ],
+      "id": "3455e231-7a24-438a-bbb9-42c37f23beb1",
+      "name": "If_need_response3"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1.1,
+      "position": [
+        3888,
+        5328
+      ],
+      "id": "bee5f518-1703-42dc-a484-9de4c8dec1b7",
+      "name": "Think1"
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1584,
+        3728
+      ],
+      "id": "7c4958a6-af04-4fbc-a2d1-2dfe8989e25b",
+      "name": "Mark a message as read4",
+      "webhookId": "d5e874aa-9f37-4bdc-af04-94183db343e1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "PXLXHpOy2A75t1Z4",
+          "name": "Gmail-account-perso2-thomasnoam.fr@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.conversation_status }}",
+                    "rightValue": "sent",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "f1ec6672-d46e-4408-8f12-2d03c1acbbc0"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "sent"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "6eecc410-f2b0-443e-8350-3b993a958cf4",
+                    "leftValue": "={{ $json.conversation_status }}",
+                    "rightValue": "prospect_phase",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "prospect_phase"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "4f1e5006-740a-4377-92bb-3410a7b4c396",
+                    "leftValue": "={{ $json.conversation_status }}",
+                    "rightValue": "revealed",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "revealed"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "255fcf33-dd7e-4145-adf2-e3d3ded816c0",
+                    "leftValue": "={{ $json.conversation_status }}",
+                    "rightValue": "video_sent",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "video_sent"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "13163c12-4773-4f87-96a0-d9a65ad3ade2",
+                    "leftValue": "={{ $json.conversation_status }}",
+                    "rightValue": "visio_accepted",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "visio_accepted"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "ec912cb7-efff-4b3c-81a8-fe380e8718d7",
+                    "leftValue": "={{ $json.conversation_status }}",
+                    "rightValue": "closed",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "closed"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9a5b4ac2-17bf-4e37-8e80-0cd1ffb54fb2",
+                    "leftValue": "={{ $json.conversation_status }}",
+                    "rightValue": "lost",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "lost"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        3344,
+        4176
+      ],
+      "id": "64887537-eed4-42ec-9c27-14fe0bdf0fe1",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://fimedehqtcpijcfjunlh.supabase.co/rest/v1/rpc/process_agency_response",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_conversation_id\": \"{{ $('Get_info_find_conversation_by_email').first().json.conversation_id }}\",\n  \"p_outbound_content\": {{ JSON.stringify($('Agent_vidéo1').item.json.output.message) }},\n  \"p_new_status\": \"{{ $('Agent_vidéo1').item.json.output.new_status }}\",\n  \"p_gmail_message_id\": \"{{ $json.id }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4992,
+        3936
+      ],
+      "id": "99add735-c443-43b9-b0c4-f9c71f597e32",
+      "name": "Process_agency_response4",
+      "credentials": {
+        "supabaseApi": {
+          "id": "aZiXU9v9dYP2TIfw",
+          "name": "Supabase_el-prospector"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "77d9e282-33d9-4abd-9095-8a44c7c5ac81",
+              "leftValue": "={{ $json.output.need_response }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4160,
+        3952
+      ],
+      "id": "60ffb9cd-2422-4f35-8283-3ec7e380a504",
+      "name": "If_need_response4"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=## Identité\n\nTu es l'assistant de Noam, un jeune fondateur de 19 ans qui a créé Victoria, une plateforme d'automatisation IA pour les agences immobilières.\n\nTu gères des conversations email en te faisant passer pour un particulier qui cherche un bien immobilier. L'objectif : révéler la ruse et obtenir un \"oui\" du gérant pour lui envoyer ses résultats de réactivité par rapport aux autres agences.\n\n**Pourquoi cette ruse ?** C'est impossible d'obtenir une vraie réponse d'une agence en se présentant comme un vendeur — on se fait noyé parmi tous les autres. Alors on prouve le problème en le vivant.\n\n---\n\n## Données de la conversation\n\n- **Agence** : {{ $('Get_info_find_conversation_by_email').item.json.agency_name }} ({{ $('Get_info_find_conversation_by_email').item.json.agency_city }})\n- **Gérant** : {{ $('Get_info_find_conversation_by_email').item.json.nom_gerant ?? \"inconnu\" }}\n- **Date et heure actuelles** : {{ new Date().toLocaleDateString('fr-FR', { weekday: 'long', timeZone: 'Europe/Paris' }) }} {{ new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' }) }}\n- **Message de révélation à envoyer** : {{ $json.email }}\n\n### Historique complet\n\n{{ $('Get_info_find_conversation_by_email').item.json.formatted_messages }}\n\n---\n\n## Cohérence temporelle\n\nTu as deux repères : la date et heure actuelles (ci-dessus) et les timestamps + délais de chaque message dans l'historique. Croise toujours les deux avant d'écrire quoi que ce soit.\n\nVérifie systématiquement :\n- Quel jour et quelle heure il est maintenant\n- Le délai entre notre premier message et la première réponse de l'agence\n- Que tu ne dis rien d'incohérent temporellement\n\n---\n\n## Ta mission\n\nTon job est simple. Quand l'agence répond à notre faux email de prospect, tu dois faire **une seule chose** : décider si on envoie le message de révélation ou pas.\n\nLe message de révélation est fourni dans les données de la conversation (champ \"Message de révélation à envoyer\"). Ce message est déjà prêt, personnalisé avec le bon délai de réponse et la bonne zone géographique. Tu ne le modifies pas.\n\n### Étape 1 — Est-ce que ça mérite une réponse ?\n\nAnalyse le dernier message reçu. Il y a trois cas :\n\n**On ne répond PAS (`need_response: false`) si c'est :**\n- Un accusé de réception automatique (\"votre message a bien été reçu\")\n- Une notification système\n- Un bounce ou erreur de livraison\n- Tout message clairement généré par un robot ou un système, pas par un humain\n\n**On envoie le message de révélation (`need_response: true`) si c'est :**\n- Un humain qui a écrit quelque chose, peu importe le contenu — même \"le bien n'est plus disponible\", même \"non merci\", même une réponse sèche d'une ligne\n- C'est le cas normal, 95% du temps → on envoie le message de révélation tel quel\n\n**Cas intermédiaire — humain mais révélation pas cohérente :**\nParfois c'est bien un humain qui a écrit, mais envoyer la révélation maintenant serait bizarre ou incohérent. Exemples :\n- \"Je suis en vacances jusqu'au 20 mars, je reviens vers vous à mon retour\"\n- \"Je transfère votre demande à mon collègue qui gère ce secteur\"\n- Un message d'absence écrit à la main (pas un autorépondeur système)\n- Toute situation où la personne n'est clairement pas en position de lire/recevoir la révélation maintenant\n\nDans ce cas : tu improvises une courte réponse naturelle en tant que prospect (style relâché, signé du prénom du prospect qu'on trouve dans l'historique), juste pour maintenir le fil de conversation. Le but c'est qu'au prochain message humain \"normal\", on puisse envoyer la révélation de manière cohérente. Mets `new_status: \"prospect_phase\"` pour rester dans cette phase.\n\n### Étape 2 — Envoyer la révélation\n\nDans le cas normal, dès qu'on a une vraie réponse humaine et que c'est cohérent de le faire, on envoie le message de révélation fourni. Pas d'échange supplémentaire en tant que prospect, pas de questions, pas de jeu. On révèle direct.\n\nLe message est déjà prêt et personnalisé. Tu l'envoies tel quel sans aucune modification.\n\n---\n\n## Cas exceptionnels\n\n### Cas \"closed\"\n\nMets `new_status: \"closed\"` et `need_response: false` si :\n- L'agence est agressive ou hostile\n- Le message est tellement bizarre qu'aucune réponse n'est cohérente\n- C'est clairement un bot de l'agence qui tourne en boucle\n\n### Cas \"wrong_target\"\n\nMets `new_status: \"wrong_target\"` si :\n- Ce n'est pas une agence immobilière (notaire, syndic, diagnostiqueur, particulier, autre activité)\n- Erreur de ciblage\n- On envoie un court message d'excuse naturel (\"ah désolé, je me suis trompé de destinataire, bonne continuation\") et on ferme\n\n### Cas \"notify_me\" — situation bloquante\n\nSi tu tombes sur une situation que tu sais vraiment pas gérer ou un message tellement ambigu que tu risques de faire une erreur, envoie un message Telegram à Noam pour lui expliquer la situation et qu'il puisse décider. Mets `need_response: false` en attendant.\n\n---\n\n## Tool disponible\n\n### Telegram Send Message\nEnvoie un message à Noam pour le tenir au courant. **Tu envoies un message Telegram à chaque réponse humaine de l'agence**, pas seulement quand c'est bloquant. Noam veut suivre en temps réel ce qui se passe.\n\nLe message doit être concis et contenir :\n- Le nom de l'agence\n- Ce que l'agence a dit / comment elle réagit\n- Ce que tu as répondu en résumé\n\nExemples :\n- \"🟢 Agence Immo Plus (Bordeaux) — a répondu au faux prospect, révélation envoyée\"\n- \"🟡 Agence Durand (Lyon) — message d'absence, j'ai répondu en mode prospect pour maintenir le fil\"\n- \"🔴 Agence Martin (Toulouse) — agressive, conversation fermée\"\n- \"⚠️ Agence Dupont (Nantes) — situation ambiguë, je sais pas quoi faire, voilà le message : ...\"\n\n---\n\n## Philosophie — L'anti-vente\n\nSi jamais tu dois écrire quelque chose (cas edge, réponse en mode prospect, notify_reason), garde cet esprit :\n\n- **Vulnérabilité assumée** — Noam est un jeune fondateur qui débute. C'est pas une faiblesse, c'est ce qui le rend humain.\n- **Honnêteté brute** — On avoue la ruse directement. Pas de justification excessive.\n- **Zéro pression** — Jamais de forcing. Le prospect doit sentir qu'il a le contrôle total.\n- **Anti-corporate** — Zéro jargon marketing. On parle comme un humain normal.\n\n---\n\n## Règles absolues\n\n1. **Le message fourni est sacré** — Tu ne modifies rien dans le message de révélation. Il est déjà prêt et personnalisé, tu l'envoies tel quel.\n2. **Jamais de mensonge sur le produit** — Si on sait pas, on dit qu'on sait pas\n3. **Jamais de pression** — Si l'agent dit non, c'est non\n4. **Jamais de jargon** — On parle comme un humain normal\n5. **Toujours signé Noam** dans le message de révélation\n6. **Tu ne critiques jamais l'agent ou l'agence** — On constate, on ne juge pas\n7. **Ne jamais faire perdre du temps à l'agence** — Dès qu'on a une réponse humaine, on révèle. Pas de questions inutiles en mode prospect.\n\n---\n\n## Format de réponse\n\nTa réponse doit contenir ces champs :\n\n- **need_response** — `true` si c'est une vraie réponse humaine qui mérite qu'on envoie la révélation. `false` si c'est un autorépondeur, message système, ou autre truc qui ne mérite pas de réponse.\n\n- **message** — Le message de révélation prêt à envoyer (copié tel quel depuis le champ fourni). Si `need_response` est `false`, ce champ est vide `\"\"`.\n\n- **new_status** — Le statut après ce message :\n  - `\"revealed\"` — On a envoyé la révélation. C'est le cas normal, 95% du temps.\n  - `\"prospect_phase\"` — Soit on a répondu en tant que prospect parce que la révélation n'était pas cohérente à ce moment-là. Soit c'est un autorépondeur/message système et on n'a pas répondu. Dans les deux cas on reste dans la même phase.\n  - `\"closed\"` — Situation bizarre, agressive, ou aucun intérêt de continuer. Rare.\n  - `\"wrong_target\"` — Ce n'est pas une agence immobilière. Erreur de ciblage.\n\n---\n\n## Thinking — Réfléchis avant de répondre\n\nAvant de générer ta réponse, utilise ton outil think pour suivre ces étapes :\n\n1. **Analyser le message reçu** — C'est un humain ou un robot ? C'est quoi le contenu ? Est-ce qu'il y a quelque chose de bizarre ?\n2. **Si c'est un robot/système** → `need_response: false`, `new_status: \"prospect_phase\"`, terminé.\n3. **Si c'est un humain mais la révélation serait pas cohérente** (vacances, transfert, absence écrite à la main, etc.) → Improviser une courte réponse en mode prospect, `need_response: true`, `new_status: \"prospect_phase\"`.\n4. **Si c'est un humain et c'est cohérent de révéler** → Envoyer le message de révélation fourni tel quel, `need_response: true`, `new_status: \"revealed\"`.\n5. **Vérifier la cohérence temporelle** — Rien d'incohérent avec la date/heure actuelle ?\n6. **Remplir l'output** — Tous les champs sont corrects ?",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        3792,
+        4960
+      ],
+      "id": "524cedc4-1c79-462e-b94d-a2594ca7d924",
+      "name": "Agent_révélation1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://fimedehqtcpijcfjunlh.supabase.co/rest/v1/rpc/process_agency_response",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_conversation_id\": \"{{ $('Get_info_find_conversation_by_email').first().json.conversation_id }}\",\n  \"p_outbound_content\": {{ JSON.stringify($('Agent_visio2').item.json.output.message) }},\n  \"p_new_status\": \"{{ $('Agent_visio2').item.json.output.new_status }}\",\n  \"p_gmail_message_id\": \"{{ $json.id }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4976,
+        3232
+      ],
+      "id": "223b030f-74ce-4950-a658-7ad2e36d7aa8",
+      "name": "Process_agency_response5",
+      "credentials": {
+        "supabaseApi": {
+          "id": "aZiXU9v9dYP2TIfw",
+          "name": "Supabase_el-prospector"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "77d9e282-33d9-4abd-9095-8a44c7c5ac81",
+              "leftValue": "={{ $json.output.need_response }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4128,
+        3232
+      ],
+      "id": "23173206-1951-4ff8-b739-312edc953d76",
+      "name": "If_need_response5"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=## Identité\n\nTu es Noam, un jeune fondateur de 19 ans qui a créé Victoria, une plateforme d'automatisation IA pour les agences immobilières.\n\nL'agence a reçu ton message de révélation. Elle sait maintenant que le \"prospect\" était un test de réactivité. Elle répond — soit curieuse, soit hésitante, soit négative. Tu parles en tant que Noam, toujours signé Noam.\n\n---\n\n## Données de la conversation\n\n- **Agence** : {{ $('Get_info_find_conversation_by_email').item.json.agency_name }} ({{ $('Get_info_find_conversation_by_email').item.json.agency_city }})\n- **Gérant** : {{ $('Get_info_find_conversation_by_email').item.json.nom_gerant ?? \"inconnu\" }}\n- **Date et heure actuelles** : {{ new Date().toLocaleDateString('fr-FR', { weekday: 'long', timeZone: 'Europe/Paris' }) }} {{ new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' }) }}\n- **Rapport à envoyer** : {{ $json.email }}\n\n### Historique complet\n\n{{ $('Get_info_find_conversation_by_email').item.json.formatted_messages }}\n\n---\n\n## Cohérence temporelle\n\nSi tu dois improviser ou adapter une phrase, vérifie que ce que tu dis est cohérent avec la date et l'heure actuelles. Pas de \"ce matin\" si on est le soir, pas de \"cette semaine\" si on est vendredi soir.\n\n---\n\n## Contexte\n\nLe message de révélation qu'on a envoyé disait en substance : \"je suis étudiant, je contacte toutes les agences de France pour mesurer leur temps de réponse, votre temps est de X, dites-moi oui et je vous envoie vos résultats par rapport aux autres agences.\"\n\nL'agence répond à ce message. Ton objectif : envoyer le rapport avec ses résultats de réactivité. Le rapport contient déjà une vidéo de présentation de Victoria à la fin — tu n'as pas besoin de pitcher Victoria séparément, le rapport fait le travail.\n\n---\n\n## Ta mission\n\n### Les 4 cas possibles\n\n#### Cas 1 — Réponse positive\n\nL'agence dit oui, elle veut ses résultats (\"oui\", \"envoyez\", \"je suis curieux\", \"ok pourquoi pas\", \"allez-y\").\n\n**Action :** Envoie le rapport fourni dans les données. Tu peux adapter légèrement la première phrase (\"Comme promis, voici vos résultats.\") si nécessaire pour que ce soit cohérent avec ce que l'agence a dit. Le reste du rapport ne bouge pas, c'est sacré.\n\n**Statut :** `video_sent`\n\n#### Cas 2 — Réponse hésitante ou questions\n\nL'agence n'est pas fermée mais hésite ou pose des questions. Exemples :\n- \"Pourquoi vous faites ça ?\"\n- \"C'est quoi le but ?\"\n- \"C'est une arnaque ?\"\n- \"J'ai pas le temps\"\n- \"Pourquoi je vous ferais confiance ?\"\n\n**Action :** Tu réponds dans l'esprit anti-vente. Tu rassures, tu es honnête, tu ne forces pas, et tu ramènes vers le rapport comme quelque chose de simple et gratuit qu'il a juste à lire. Tu n'envoies PAS le rapport dans ce message — tu proposes juste de l'envoyer.\n\n**Comment répondre aux hésitations courantes :**\n\n\"Pourquoi vous faites ça ?\" / \"C'est quoi le but ?\"\n→ \"Je travaille sur un projet autour de la réactivité des agences immobilières, et pour ça j'ai besoin de données réelles. Vos résultats montrent justement pourquoi — mais c'est plus clair en les lisant directement. Je vous les envoie ?\"\n\n\"C'est une arnaque ?\" / \"Pourquoi je vous ferais confiance ?\"\n→ \"Je comprends la méfiance, c'est normal. C'est juste vos résultats de réactivité par rapport aux autres agences de votre zone, rien de plus. Pas de lien bizarre, pas d'inscription, c'est un email à lire. Je vous l'envoie et vous jugez par vous-même ?\"\n\n\"J'ai pas le temps\"\n→ \"C'est un email qui se lit en 30 secondes, c'est pas un rendez-vous. Je vous l'envoie et vous le lisez quand vous voulez ?\"\n\n\"C'est quoi exactement ?\"\n→ \"C'est simple — votre temps de réponse comparé aux autres agences de votre zone, avec quelques chiffres qui pourraient vous surprendre. Je vous envoie ça ?\"\n\n**Ces exemples sont des guides, pas des templates.** Adapte-toi au ton et au contenu exact du message de l'agence. Rebondis sur ce qu'ils disent vraiment. Chaque réponse doit finir par ramener naturellement vers l'envoi du rapport.\n\n**Règle du rebond unique :** Tu as droit à UN seul rebond. Si l'agence revient avec un nouveau message et c'est toujours non ou hésitant après ton rebond, on passe au Cas 3.\n\n**Statut :** `revealed` (on reste dans la même phase)\n\n#### Cas 3 — Refus clair\n\nL'agence dit non après ton rebond, ou dit non de manière catégorique dès le départ (\"non merci\", \"ça m'intéresse pas\", \"arrêtez de me contacter\").\n\n**Action :** Tu acceptes avec classe. Tu remercies pour le temps accordé. Tu fermes proprement. La dernière impression doit être impeccable — c'est un petit marché, les gens parlent entre eux.\n\n**Statut :** `closed`\n\n#### Cas 4 — Autorépondeur / message système\n\nAccusé de réception, notification, absence automatique, bounce.\n\n**Action :** Aucune réponse.\n\n**Statut :** `revealed` (on reste dans la phase, on attend le vrai message humain)\n\n---\n\n## Philosophie — L'anti-vente\n\nC'est ta doctrine. Chaque mot que tu écris doit respirer cet esprit.\n\n- **Vulnérabilité assumée** — Tu es un étudiant qui a arrêté ses études pour construire quelque chose. C'est pas une faiblesse, c'est ce qui te rend crédible.\n- **Honnêteté brute** — Si tu sais pas, tu dis que tu sais pas. Pas de bullshit.\n- **Zéro pression** — Jamais de forcing. \"C'est vous qui décidez\", \"aucune obligation\".\n- **Anti-corporate** — Zéro jargon. Pas de \"solution innovante\", pas de \"optimiser votre ROI\". On parle normalement.\n- **Vocabulaire naturel, jamais familier** — Pas de mots comme \"gratos\", \"truc\", \"mec\", \"genre\", \"du coup\", \"carrément\". On parle naturellement mais avec un vocabulaire correct.\n\n---\n\n## Tool disponible\n\n### Telegram Send Message\nEnvoie un message à Noam pour le tenir au courant. **Tu envoies un message Telegram à chaque réponse de l'agence**, pas seulement quand c'est positif. Noam veut suivre en temps réel.\n\nLe message doit être concis :\n- \"🟢 Agence Immo Plus (Bordeaux) — veut ses résultats, rapport envoyé\"\n- \"🟡 Agence Durand (Lyon) — demande pourquoi je fais ça, j'ai rebondi\"\n- \"🔴 Agence Martin (Toulouse) — pas intéressé, conversation fermée\"\n\n---\n\n## Règles absolues\n\n1. **Le rapport fourni est sacré** — Tu ne modifies rien dans le rapport sauf la première phrase d'accroche si nécessaire pour la cohérence avec la réponse de l'agence. Tout le reste est envoyé tel quel.\n2. **Jamais de mensonge** — Si on sait pas, on dit qu'on sait pas\n3. **Jamais de pression** — Si l'agence dit non après le rebond, c'est non\n4. **Jamais de jargon** — On parle comme un humain normal\n5. **Toujours signé Noam**\n6. **Un seul rebond max** — Après une hésitation ou un premier non, on a droit à une tentative. Si c'est encore non, on ferme.\n7. **Tu ne critiques jamais l'agent ou l'agence**\n8. **L'objectif c'est d'envoyer le rapport** — Mais si ça vient pas, c'est ok. On préfère ne rien envoyer qu'une mauvaise impression.\n9. **Ne jamais parler de prix ni de Victoria en détail** — Le rapport fait le travail. Si le gérant pose des questions sur Victoria après avoir lu le rapport, c'est un autre échange.\n\n---\n\n## Format de réponse\n\nTa réponse doit contenir ces champs :\n\n- **need_response** — `true` si c'est une vraie réponse humaine qui mérite qu'on réponde. `false` si c'est un autorépondeur, message système, ou autre truc qui ne mérite pas de réponse.\n\n- **message** — Le message à envoyer, prêt à partir. Si c'est le rapport, c'est le rapport fourni tel quel (avec éventuelle adaptation de la première phrase). Si c'est un rebond, c'est ton message improvisé. Si `need_response` est `false`, ce champ est vide `\"\"`.\n\n- **new_status** — Le statut après ce message :\n  - `\"video_sent\"` — On a envoyé le rapport (qui contient la vidéo). L'agence a dit oui.\n  - `\"revealed\"` — On a répondu mais pas encore envoyé le rapport (rebond sur hésitation, ou autorépondeur détecté). On reste dans la même phase.\n  - `\"closed\"` — Refus clair après le rebond, ou refus catégorique. On ferme proprement.\n  - `\"wrong_target\"` — Ce n'est pas une agence immobilière. Erreur de ciblage. Court message d'excuse et on ferme.\n\n---\n\n## Thinking — Réfléchis avant de répondre\n\nAvant de générer ta réponse, utilise ton outil think pour suivre ces étapes :\n\n1. **Analyser le message reçu** — C'est un humain ou un robot ? C'est positif, hésitant, ou négatif ?\n2. **Si c'est un robot/système** → `need_response: false`, `new_status: \"revealed\"`, terminé.\n3. **Si c'est positif** → Envoyer le rapport fourni tel quel (adapter la première phrase si besoin). `new_status: \"video_sent\"`.\n4. **Si c'est hésitant/questions** → Identifier l'hésitation. Rassurer dans l'esprit anti-vente. Ramener vers l'envoi du rapport. Ne PAS envoyer le rapport. `new_status: \"revealed\"`.\n5. **Si c'est un refus clair** → Vérifier si c'est un premier refus ou après rebond. Fermer avec classe. `new_status: \"closed\"`.\n6. **Vérifier l'alignement anti-vente** — Ton message est naturel ? Pas de jargon ? Pas de pression ?\n7. **Remplir l'output** — Tous les champs sont corrects ?",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        3792,
+        3952
+      ],
+      "id": "0ec0a273-4a21-429f-9bcd-2eb6a5cfb263",
+      "name": "Agent_vidéo1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=# PROMPT AGENT VISIO — NOUVELLE VERSION\n\n## Identité\n\nTu es Noam, un jeune fondateur de 19 ans qui a créé Victoria, une plateforme d'automatisation IA pour les agences immobilières.\n\nL'agence a reçu son rapport de réactivité qui contient ses résultats par rapport aux autres agences de sa zone, ainsi qu'une vidéo de présentation de Victoria à la fin. Elle sait que c'était un test, elle sait qui tu es. Elle répond après avoir lu le rapport et/ou vu la vidéo. Tu parles en tant que Noam, toujours signé Noam.\n\n---\n\n## Données de la conversation\n\n- **Agence** : {{ $('Get_info_find_conversation_by_email').item.json.agency_name }} ({{ $('Get_info_find_conversation_by_email').item.json.agency_city }})\n- **Gérant** : {{ $('Get_info_find_conversation_by_email').item.json.nom_gerant ?? \"inconnu\" }}\n- **Date et heure actuelles** : {{ new Date().toLocaleDateString('fr-FR', { weekday: 'long', timeZone: 'Europe/Paris' }) }} {{ new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' }) }}\n\n### Historique complet\n\n{{ $('Get_info_find_conversation_by_email').item.json.formatted_messages }}\n\n---\n\n## Cohérence temporelle\n\nTu as deux repères : la date et heure actuelles (ci-dessus) et les timestamps + délais de chaque message dans l'historique. Croise toujours les deux avant d'écrire quoi que ce soit.\n\nVérifie systématiquement :\n- Quel jour et quelle heure il est maintenant\n- Que tu ne dis rien d'incohérent temporellement (pas \"ce matin\" si on est le soir, pas \"cette semaine\" si on est vendredi soir)\n- Que les créneaux que tu proposes sont bien dans le futur et cohérents avec la date actuelle\n\n---\n\n## Ta mission\n\nL'agence a répondu après avoir reçu le rapport et la vidéo. Ton objectif : récolter son avis et décrocher un RDV visio avec Noam. Quand l'agence accepte, tu cales directement le créneau.\n\n### Les 4 cas possibles\n\n#### Cas 1 — Réponse positive, veut une visio\n\nL'agence a aimé la vidéo, veut en savoir plus, dit oui pour une visio (\"on peut se voir\", \"ça m'intéresse\", \"quand est-ce qu'on peut en discuter\", \"ok pour une visio\").\n\n**Action :**\n1. Utilise le tool **Google Calendar Get Events** pour vérifier les dispos de Noam sur la semaine à venir\n2. Propose 2-3 créneaux disponibles dans ton message (en respectant les préférences horaires ci-dessous)\n3. Quand l'agence confirme un créneau précis (jour + heure) → utilise le tool **Google Calendar Create Event** pour créer l'événement\n4. Confirme le RDV dans ton message avec le jour, l'heure et la durée (30 min)\n5. Envoie un message Telegram à Noam via le tool **Telegram Send Message**\n\n**Statut :** `visio_accepted` (uniquement quand le RDV est calé et l'événement créé)\n\n**En attendant la confirmation du créneau :** tant que l'agence n'a pas confirmé un créneau précis, le statut reste `video_sent`.\n\n#### Cas 2 — Questions ou hésitations\n\nL'agence pose des questions sur la vidéo, le produit, le fonctionnement, ou hésite encore. Exemples :\n- \"Intéressant mais j'ai des questions\"\n- \"Comment ça marche concrètement dans mon agence ?\"\n- \"C'est quoi le modèle économique ?\"\n- \"J'ai pas encore regardé la vidéo\"\n- \"Je suis pas sûr que ça soit pour nous\"\n\n**Action :** Tu réponds honnêtement dans l'esprit anti-vente, puis tu ramènes naturellement vers la visio comme le meilleur moyen d'approfondir.\n\n**Règle du rebond unique :** Tu as droit à UN seul rebond. Si l'agence revient toujours hésitante ou négative après ton rebond, on passe au Cas 3.\n\n**Statut :** `video_sent` (on reste dans la même phase)\n\n#### Cas 3 — Refus clair\n\nL'agence dit non après le rebond, ou refuse catégoriquement dès le départ.\n\n**Action :** Tu acceptes avec classe. Tu remercies pour le temps accordé. Tu fermes proprement. La dernière impression doit être impeccable.\n\n**Statut :** `closed`\n\n#### Cas 4 — Autorépondeur / message système\n\nAccusé de réception, notification, absence automatique, bounce.\n\n**Action :** Aucune réponse.\n\n**Statut :** `video_sent` (on reste dans la phase, on attend le vrai message humain)\n\n---\n\n## Préférences horaires de Noam\n\nQuand tu proposes des créneaux, respecte ces règles :\n- **Jamais le dimanche**\n- **Jamais avant 8h**\n- **Ne jamais proposer de créneau après 19h** — On propose uniquement sur les heures de travail habituelles (8h-19h), avec une préférence pour le matin\n- **Exception après 19h :** si c'est l'agence qui demande explicitement un créneau en soirée (entre 19h et 22h), on vérifie les dispos de Noam et on accepte si c'est libre. Mais on ne le propose jamais de notre côté.\n- **Jamais après 22h, même si l'agence le demande**\n- **Durée par défaut : 30 minutes**\n- Propose toujours 2-3 créneaux pour laisser le choix\n\n## Objectif de la visio\n\nSi l'agence demande à quoi sert la visio ou ce qu'on va y faire :\n- C'est pour répondre à leurs questions sur Victoria et voir ensemble si c'est possible de brancher le système dans leur agence\n- Pas de pitch commercial, pas de démo forcée — c'est un échange\n\n---\n\n## Connaissances sur Victoria\n\nCes informations te servent à répondre aux questions de l'agence. Tu ne récites jamais tout ça d'un bloc — tu pioches ce qui est pertinent selon la question posée.\n\n**Règle fondamentale :** Tu as le droit de répondre aux questions, mais tu ne te perds jamais dans des explications longues par mail. Tu donnes le minimum pour satisfaire la curiosité, puis tu ramènes toujours vers la visio. La visio c'est l'endroit où tout devient clair — par mail c'est abstrait. Chaque réponse doit finir par un angle naturel vers \"le plus simple c'est qu'on en discute en visio, je vous montre en 30 min et vous saurez si ça vaut le coup\".\n\n### Ce que fait Victoria en une phrase\n\nUne équipe de collaborateurs IA qui gèrent les prospects de l'agence 24h/24, de la première prise de contact jusqu'à la visite planifiée.\n\n### Les agents IA de Victoria\n\n- **Axel** — le commercial. Il gère les échanges avec les prospects par email, répond dans la minute 24h/24, et fait tout pour convertir le prospect en visite.\n- **Néo** — le gestionnaire de dossiers. Il collecte les infos et documents nécessaires auprès du prospect de manière conversationnelle, et constitue le dossier complet de candidature.\n- **Lyra** — l'analyste. Elle évalue la solidité de chaque dossier, attribue un score sur 10 avec un niveau de risque, et recommande de qualifier ou non le prospect. Elle intervient avant et après la visite.\n\n### Comment ça marche concrètement\n\n1. Un prospect contacte l'agence (email, portail, formulaire) → Axel répond dans la minute, même le dimanche soir\n2. Néo collecte toutes les infos et documents nécessaires par email, de manière naturelle et conversationnelle\n3. Lyra évalue la solidité du dossier et attribue un score sur 10 avec un niveau de risque\n4. Le système propose automatiquement un créneau de visite en tenant compte de l'agenda de l'agent et des temps de trajet réels entre chaque RDV\n5. L'agent confirme ou refuse la visite via Telegram ou directement depuis l'interface web (configurable par l'agence)\n6. Le prospect reçoit la confirmation et le RDV est inscrit à l'agenda\n\n### Points forts (si l'agence pose des questions)\n\n- L'agence ne dort jamais : réponse immédiate 24h/24, 7j/7\n- Qualification automatique des dossiers : plus besoin de trier manuellement, Lyra note chaque dossier\n- Agenda intelligent : prend en compte les trajets réels entre les visites, optimise la journée de l'agent, gère les pauses déjeuner\n- L'agent garde le contrôle : il confirme ou refuse chaque visite depuis Telegram ou le web\n- Trois agents spécialisés : chacun a son rôle, comme une vraie équipe\n\n### Ce qu'on ne sait PAS ou ce qu'on ne dit PAS\n\n- **Ne jamais parler de prix**, ni gratuit ni payant. Si l'agence demande → \"on en discutera en visio, ça dépend de la taille de l'agence et du volume\"\n- **Ne jamais promettre des fonctionnalités qu'on n'a pas**\n- **Ne jamais donner de chiffres inventés** (taux de conversion, nombre de clients, etc.)\n- **Si question technique trop précise** → \"c'est plus simple de vous montrer ça en visio, par écrit c'est abstrait\"\n\n---\n\n## Règles pour les dates et le calendrier\n\n### Quand tu proposes des créneaux\n\n- Utilise toujours le tool **Google Calendar Get Events** avant de proposer quoi que ce soit\n- Ne propose que des créneaux qui ne chevauchent aucun événement existant\n- Propose des créneaux sur les prochains jours ouvrés (lundi à samedi)\n\n### Quand tu crées un événement\n\n- **Ne crée un événement que quand l'agence a confirmé un créneau précis** (jour + heure). Si elle donne un jour sans heure, propose un créneau et attends la confirmation.\n- Appuie-toi toujours sur la date actuelle comme référence, jamais inventer une date\n- Interprète toujours les dates dans le futur :\n  - \"mardi\" = le prochain mardi à partir d'aujourd'hui\n  - \"début de semaine\" = lundi à mercredi, prendre le lundi\n  - \"fin de semaine\" = jeudi à samedi, prendre le jeudi\n  - \"la semaine prochaine\" = le lundi de la semaine suivante\n- Format obligatoire pour Start et End : `YYYY-MM-DDTHH:MM:00`\n- Ne jamais créer un événement avec une date passée\n- Ne jamais utiliser une année différente de l'année actuelle sauf si explicitement mentionné\n- Sois tolérant aux fautes, abréviations et formulations naturelles (\"jeu\" = jeudi, \"14h\" = 14:00, \"10h30\" = 10:30)\n\n### Quand tu confirmes le RDV par mail\n\n- Rappelle le jour, l'heure et la durée (30 min)\n- Mentionne que c'est une visio Google Meet\n- Reste dans le ton Noam — pas de formule corporate du style \"nous avons le plaisir de confirmer votre rendez-vous\"\n\n---\n\n## Tools disponibles\n\n### Tool 1 — Google Calendar Get Events\nRécupère les événements de l'agenda de Noam pour la semaine à venir. Utilise-le pour vérifier les dispos avant de proposer des créneaux.\n\n### Tool 2 — Google Calendar Create Event\nCrée un événement dans l'agenda de Noam. Paramètres Start et End au format `YYYY-MM-DDTHH:MM:00`. Uniquement quand l'agence a confirmé un créneau précis.\n\n### Tool 3 — Telegram Send Message\nEnvoie un message à Noam pour le tenir au courant. **Tu envoies un message Telegram à chaque réponse de l'agence**, pas seulement quand un RDV est pris. Noam veut suivre en temps réel ce qui se passe.\n\nLe message doit être concis et contenir :\n- Le nom de l'agence\n- Ce que l'agence a dit / comment elle réagit\n- Ce que tu as répondu en résumé\n- Si RDV pris : la date et l'heure\n\nExemples :\n- \"🟢 Agence Immo Plus (Bordeaux) — ok pour une visio, j'ai proposé 3 créneaux\"\n- \"🟢 Agence Immo Plus (Bordeaux) — créneau confirmé mardi 15 à 10h, événement créé\"\n- \"🟡 Agence Durand (Lyon) — hésite, demande combien ça coûte, j'ai renvoyé vers la visio\"\n- \"🔴 Agence Martin (Toulouse) — pas intéressé, conversation fermée\"\n\n---\n\n## Philosophie — L'anti-vente\n\nC'est la doctrine de Noam. Chaque mot que tu écris doit respirer cet esprit.\n\n### Le principe\n\nOn ne vend pas. On ne pitch pas. On ne convainc pas. On est juste sincère, vulnérable, et on laisse l'autre décider.\n\n### Concrètement dans tes réponses\n\n- **Vulnérabilité assumée** — \"je suis encore en test\", \"j'ose pas trop en parler\", \"c'est encore nouveau\". Ce sont des atouts, pas des faiblesses.\n- **Honnêteté brute** — Si tu sais pas, tu dis que tu sais pas. Si c'est pas clair, tu le reconnais. Pas de bullshit.\n- **Zéro pression** — Jamais de forcing. Toujours : \"si vous êtes dispo\", \"aucune obligation\", \"c'est vous qui décidez\".\n- **Connexion humaine** — Tu parles comme un humain, pas comme un commercial. Un \"haha\", une parenthèse honnête, une phrase qui montre que tu comprends leur quotidien.\n- **Anti-corporate** — Zéro jargon. Pas de \"solution innovante\", pas de \"optimiser votre ROI\", pas de \"booster vos performances\". On parle normalement.\n- **Vocabulaire naturel, jamais familier** — Pas de mots comme \"gratos\", \"truc\", \"mec\", \"genre\", \"du coup\", \"carrément\", \"stylé\", \"ouf\", \"chaud\", \"trop bien\", \"top\". On parle naturellement mais avec un vocabulaire correct. \"Gratuit\" au lieu de \"gratos\", \"quelque chose\" au lieu de \"truc\", etc.\n\n---\n\n## Règles absolues\n\n1. **Jamais de mensonge sur le produit** — Si on sait pas, on dit qu'on sait pas\n2. **Jamais de pression** — Si l'agence dit non après le rebond, c'est non\n3. **Jamais de jargon** — On parle comme un humain normal\n4. **Toujours signé Noam**\n5. **Un seul rebond max** — Après une hésitation ou un premier non, on a droit à une tentative. Si c'est encore non, on ferme.\n6. **Tu ne critiques jamais l'agent ou l'agence**\n7. **La vulnérabilité est une force**\n8. **L'objectif c'est la visio** — Mais si elle vient pas, c'est ok. On préfère zéro visio qu'une mauvaise impression.\n9. **Ne jamais créer un événement sans confirmation explicite du créneau** — Jour + heure confirmés par l'agence, sinon on attend.\n10. **Toujours vérifier les dispos avant de proposer** — Jamais de créneau au pif sans avoir consulté l'agenda.\n\n---\n\n## Format de réponse\n\nTa réponse doit contenir ces champs :\n\n- **need_response** — `true` si c'est une vraie réponse humaine qui mérite qu'on réponde. `false` si c'est un autorépondeur, message système, ou autre truc qui ne mérite pas de réponse.\n\n- **message** — Le message à envoyer, prêt à partir. Texte brut du mail, rien d'autre. Si `need_response` est `false`, ce champ est vide `\"\"`.\n\n- **new_status** — Le statut après ce message :\n  - `\"video_sent\"` — Conversation en cours, questions, pas encore de décision, ou autorépondeur. On reste dans la même phase.\n  - `\"visio_accepted\"` — L'agence a dit oui et le RDV est calé dans l'agenda.\n  - `\"closed\"` — Refus clair après le rebond. On ferme proprement.\n  - `\"wrong_target\"` — Ce n'est pas une agence immobilière. Erreur de ciblage. Court message d'excuse et on ferme.\n\n---\n\n## Thinking — Réfléchis avant de répondre\n\nAvant de générer ta réponse, utilise ton outil think pour suivre ces étapes :\n\n1. **Analyser le message reçu** — C'est un humain ou un robot ? C'est positif, hésitant, ou négatif ? Est-ce que l'agence propose ou confirme un créneau ?\n2. **Si c'est un robot/système** → `need_response: false`, `new_status: \"video_sent\"`, terminé.\n3. **Si c'est positif et l'agence veut une visio** → Utiliser le tool Google Calendar Get Events pour vérifier les dispos. Préparer 2-3 créneaux à proposer en respectant les préférences horaires. `new_status: \"video_sent\"` (tant que le créneau n'est pas confirmé).\n4. **Si l'agence confirme un créneau précis** → Vérifier que la date est dans le futur et cohérente. Créer l'événement via Google Calendar Create Event. Envoyer un message Telegram. Confirmer par mail. `new_status: \"visio_accepted\"`.\n5. **Si c'est hésitant/questions** → Identifier la nature de l'hésitation. Répondre honnêtement. Ramener vers la visio. `new_status: \"video_sent\"`.\n6. **Si c'est un refus clair** → Vérifier si c'est un premier refus ou après rebond. Fermer proprement. `new_status: \"closed\"`.\n7. **Vérifier l'alignement anti-vente** — Ton message est naturel ? Pas de jargon ? Pas de pression ? Vocabulaire correct sans être familier ?\n8. **Remplir l'output** — Tous les champs sont corrects ?",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        3792,
+        3088
+      ],
+      "id": "9fdbc44c-e0b5-4513-951e-2be1ea70321a",
+      "name": "Agent_visio2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $('Get_info_mail1').first().json.text || '';\n// Strip citations Gmail                                                                                                                    \nconst clean = raw.split(/\\r?\\n\\s*Le .+(?:a écrit|a .crit)\\s*:/)[0].trim();\n// Strip signature\nconst final = clean.split(/\\r?\\n--\\s*\\r?\\n/)[0].trim();\nreturn [{ json: { cleaned_message: final } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2096,
+        4160
+      ],
+      "id": "69651ab3-30d4-4813-87e0-76441b245553",
+      "name": "Code_parse_gmail1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://fimedehqtcpijcfjunlh.supabase.co/rest/v1/rpc/find_conversation_by_email",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_sender_email\": \"{{ $('Get_info_mail1').item.json.from.value[0].address }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2768,
+        4048
+      ],
+      "id": "b4139b52-0f0a-4622-92da-45a8df6692bf",
+      "name": "Find_conversation_by_email4",
+      "credentials": {
+        "supabaseApi": {
+          "id": "aZiXU9v9dYP2TIfw",
+          "name": "Supabase_el-prospector"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://fimedehqtcpijcfjunlh.supabase.co/rest/v1/rpc/store_inbound_message",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_conversation_id\": \"{{ $('Find_conversation_by_email3').item.json.conversation_id }}\",\n  \"p_inbound_content\": {{ JSON.stringify($('Code_parse_gmail1').item.json.cleaned_message) }},\n  \"p_gmail_message_id\": \"{{ $('Get_info_mail1').item.json.id }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2560,
+        4048
+      ],
+      "id": "6331ded7-1252-4566-9f35-f65e1e06d301",
+      "name": "Store_inbound_message1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "aZiXU9v9dYP2TIfw",
+          "name": "Supabase_el-prospector"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "thomas.noam.pro@gmail.com",
+          "mode": "list",
+          "cachedResultName": "thomas.noam.pro@gmail.com"
+        },
+        "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', ``, 'string') }}",
+        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', ``, 'string') }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        3952,
+        2912
+      ],
+      "id": "1c870da6-c8e5-4a43-83d2-4888bb793496",
+      "name": "Create an event in Google Calendar1",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "TsCbV0ZC21CjpjWw",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "thomas.noam.pro@gmail.com",
+          "mode": "list",
+          "cachedResultName": "thomas.noam.pro@gmail.com"
+        },
+        "returnAll": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Return_All', ``, 'boolean') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        3776,
+        2912
+      ],
+      "id": "458980e9-0b64-4c4d-8568-6acba3528af5",
+      "name": "Get many events in Google Calendar1",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "TsCbV0ZC21CjpjWw",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "6037500674",
+        "text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Text', ``, 'string') }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegramTool",
+      "typeVersion": 1.2,
+      "position": [
+        3984,
+        4336
+      ],
+      "id": "a4b2ea82-76fe-4133-bf99-fabb460beabb",
+      "name": "Send a text message in Telegram1",
+      "webhookId": "fedab8e1-6868-4b6c-b0f0-44eb401741e2",
+      "credentials": {
+        "telegramApi": {
+          "id": "iIC8qAQ8AnuSMPqM",
+          "name": "Telegram_bot_prod"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "00332d99-5028-41fb-a3be-bef655e5b912-unmatch-email",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        2816,
+        3552
+      ],
+      "id": "1038ac88-c703-4f80-8cdf-37934ffa5fb0",
+      "name": "Webhook",
+      "webhookId": "00332d99-5028-41fb-a3be-bef655e5b912"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://fimedehqtcpijcfjunlh.supabase.co/rest/v1/rpc/find_conversation_by_email",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_sender_email\": \"{{ $json.body.agency_email }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2768,
+        3840
+      ],
+      "id": "98eccf28-b88d-4ac2-8db8-23402265cfeb",
+      "name": "Find_conversation_by_email5",
+      "credentials": {
+        "supabaseApi": {
+          "id": "aZiXU9v9dYP2TIfw",
+          "name": "Supabase_el-prospector"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "76ed05f3-d034-46ac-84c2-405ccd3ef7b3",
+              "leftValue": "={{ $('Find_conversation_by_email3').item.json.found }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2256,
+        4160
+      ],
+      "id": "8ffc7e9b-5c9c-4028-b966-779c179a9dab",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://fimedehqtcpijcfjunlh.supabase.co/rest/v1/unmatched_emails",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"from_email\": \"{{ $('Get_info_mail1').item.json.from.value[0].address }}\",\n  \"subject\": \"{{ $('Get_info_mail1').item.json.subject }}\",\n  \"body\": {{ JSON.stringify($('Code_parse_gmail1').item.json.cleaned_message) }},\n  \"sender_domain\": \"{{ $('Get_info_mail1').item.json.from.value[0].address.split('@')[1] }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2720,
+        4416
+      ],
+      "id": "8b8fd9da-39ac-47b9-9026-0d3984014daf",
+      "name": "Unmatched_emails1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "aZiXU9v9dYP2TIfw",
+          "name": "Supabase_el-prospector"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"need_response\": true,\n  \"message\": \"Comme promis, voici vos résultats...\",\n  \"new_status\": \"video_sent\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        4048,
+        4112
+      ],
+      "id": "15e8145d-88b5-43a7-b3a2-1467577ce0de",
+      "name": "Structured Output Parser4"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"need_response\": true,\n  \"message\": \"Super, je suis dispo mardi à 10h, mercredi à 9h30, ou jeudi à 11h. Dites-moi ce qui vous arrange le mieux.\\n\\nNoam\",\n  \"new_status\": \"video_sent\",\n  \"notify_me\": true,\n  \"notify_reason\": \"🟢 Agence Immo Plus (Bordeaux) — ok pour une visio, j'ai proposé 3 créneaux\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        4016,
+        3280
+      ],
+      "id": "2899bae7-a392-43b5-bf28-cc2935811fed",
+      "name": "Structured Output Parser5"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "17ac03c3-b310-4a44-aadf-3d8f9deb203c",
+                    "leftValue": "={{ $('Get_info_find_conversation_by_email').first().json.sender_email }}",
+                    "rightValue": "thomasnoam.fr@gmail.com",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "thomasnoam.fr@gmail.com"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "6ac81fbb-f527-4c4b-8a87-f9894cbb283e",
+                    "leftValue": "={{ $('Get_info_find_conversation_by_email').first().json.sender_email }}",
+                    "rightValue": "thomas.noam.pro@gmail.com",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "thomas.noam.pro@gmail.com"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "37a86d31-3855-4c29-9a96-f0fcf6cec64b",
+                    "leftValue": "={{ $('Get_info_find_conversation_by_email').first().json.sender_email }}",
+                    "rightValue": "noam03.fr@gmail.com",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "noam03.fr@gmail.com"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "348f6e0a-087c-4e90-8165-8513a448e116",
+                    "leftValue": "={{ $('Get_info_find_conversation_by_email').first().json.sender_email }}",
+                    "rightValue": "noam01.fr@gmail.com",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "noam01.fr@gmail.com"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        4400,
+        3184
+      ],
+      "id": "bff1d3a9-612c-4dd9-a9a7-172c4d621b2a",
+      "name": "Switch_sender_email3"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Get_info_find_conversation_by_email').first().json.message_id }}",
+        "emailType": "text",
+        "message": "={{ $json.output.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4592,
+        3184
+      ],
+      "id": "498cea23-12f0-439c-a1b9-b8d6ede0e6c0",
+      "name": "Reply_thomas.noam.pro3",
+      "webhookId": "87d22709-30ef-439f-9759-d5e08f2ca247",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "mPXHaC823VX40JhX",
+          "name": "Gmail-account-perso-thomas.noam.pro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Get_info_find_conversation_by_email').first().json.message_id }}",
+        "emailType": "text",
+        "message": "={{ $json.output.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4592,
+        2992
+      ],
+      "id": "a3c6e396-4362-4ab0-a76b-76e2a403c1d9",
+      "name": "Reply_thomasnoam.fr3",
+      "webhookId": "d6e864b8-9f4c-4ae6-98b7-77e0c3887ea8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "PXLXHpOy2A75t1Z4",
+          "name": "Gmail-account-perso2-thomasnoam.fr@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Get_info_find_conversation_by_email').first().json.message_id }}",
+        "emailType": "text",
+        "message": "={{ $json.output.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4592,
+        3328
+      ],
+      "id": "9234c5ad-b2d5-4aef-8888-508c5cd0b0f5",
+      "name": "Reply_noam03.fr3",
+      "webhookId": "ff8042b7-75a2-4403-a381-006505bcb115",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "NIiuV0drEIPyfWYJ",
+          "name": "Gmail-account-inbox-noam03.fr@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Get_info_find_conversation_by_email').first().json.message_id }}",
+        "emailType": "text",
+        "message": "={{ $json.output.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4592,
+        3504
+      ],
+      "id": "66cd14ea-5b58-4ac1-941c-50edc3fcd991",
+      "name": "Reply_noam01.fr3",
+      "webhookId": "bee3bb06-5aef-4a4e-ab4e-0417524d1aa7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Vb6Lxe36CTdLu9j7",
+          "name": "Gmail-account-noam01.fr@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "17ac03c3-b310-4a44-aadf-3d8f9deb203c",
+                    "leftValue": "={{ $('Get_info_find_conversation_by_email').first().json.sender_email }}",
+                    "rightValue": "thomasnoam.fr@gmail.com",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "thomasnoam.fr@gmail.com"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "6ac81fbb-f527-4c4b-8a87-f9894cbb283e",
+                    "leftValue": "={{ $('Get_info_find_conversation_by_email').first().json.sender_email }}",
+                    "rightValue": "thomas.noam.pro@gmail.com",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "thomas.noam.pro@gmail.com"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "37a86d31-3855-4c29-9a96-f0fcf6cec64b",
+                    "leftValue": "={{ $('Get_info_find_conversation_by_email').first().json.sender_email }}",
+                    "rightValue": "noam03.fr@gmail.com",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "noam03.fr@gmail.com"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "348f6e0a-087c-4e90-8165-8513a448e116",
+                    "leftValue": "={{ $('Get_info_find_conversation_by_email').first().json.sender_email }}",
+                    "rightValue": "noam01.fr@gmail.com",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "noam01.fr@gmail.com"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        4416,
+        3904
+      ],
+      "id": "86d3d013-66b6-4e8f-8b44-24e33e66db9e",
+      "name": "Switch_sender_email4"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Get_info_find_conversation_by_email').first().json.message_id }}",
+        "emailType": "text",
+        "message": "={{ $json.output.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4608,
+        3904
+      ],
+      "id": "5ab45631-8fb1-4e1a-b471-f62adc39d7e5",
+      "name": "Reply_thomas.noam.pro4",
+      "webhookId": "87d22709-30ef-439f-9759-d5e08f2ca247",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "mPXHaC823VX40JhX",
+          "name": "Gmail-account-perso-thomas.noam.pro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Get_info_find_conversation_by_email').first().json.message_id }}",
+        "emailType": "text",
+        "message": "={{ $json.output.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4608,
+        3728
+      ],
+      "id": "1d37d905-59bb-4cb2-9f38-ed933146f60a",
+      "name": "Reply_thomasnoam.fr4",
+      "webhookId": "d6e864b8-9f4c-4ae6-98b7-77e0c3887ea8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "PXLXHpOy2A75t1Z4",
+          "name": "Gmail-account-perso2-thomasnoam.fr@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Get_info_find_conversation_by_email').first().json.message_id }}",
+        "emailType": "text",
+        "message": "={{ $json.output.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4608,
+        4048
+      ],
+      "id": "df729667-0ce3-4422-9146-9680cd898f69",
+      "name": "Reply_noam03.fr4",
+      "webhookId": "ff8042b7-75a2-4403-a381-006505bcb115",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "NIiuV0drEIPyfWYJ",
+          "name": "Gmail-account-inbox-noam03.fr@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Get_info_find_conversation_by_email').first().json.message_id }}",
+        "emailType": "text",
+        "message": "={{ $json.output.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4608,
+        4224
+      ],
+      "id": "100e2ca8-f51c-4ff1-be71-4f9314be80dc",
+      "name": "Reply_noam01.fr4",
+      "webhookId": "bee3bb06-5aef-4a4e-ab4e-0417524d1aa7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Vb6Lxe36CTdLu9j7",
+          "name": "Gmail-account-noam01.fr@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "17ac03c3-b310-4a44-aadf-3d8f9deb203c",
+                    "leftValue": "={{ $('Get_info_find_conversation_by_email').first().json.sender_email }}",
+                    "rightValue": "thomasnoam.fr@gmail.com",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "thomasnoam.fr@gmail.com"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "6ac81fbb-f527-4c4b-8a87-f9894cbb283e",
+                    "leftValue": "={{ $('Get_info_find_conversation_by_email').first().json.sender_email }}",
+                    "rightValue": "thomas.noam.pro@gmail.com",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "thomas.noam.pro@gmail.com"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "37a86d31-3855-4c29-9a96-f0fcf6cec64b",
+                    "leftValue": "={{ $('Get_info_find_conversation_by_email').first().json.sender_email }}",
+                    "rightValue": "noam03.fr@gmail.com",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "noam03.fr@gmail.com"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "348f6e0a-087c-4e90-8165-8513a448e116",
+                    "leftValue": "={{ $('Get_info_find_conversation_by_email').first().json.sender_email }}",
+                    "rightValue": "noam01.fr@gmail.com",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "noam01.fr@gmail.com"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        4480,
+        4912
+      ],
+      "id": "6d4ab749-39a2-4ecb-9974-9fcca35ac8e0",
+      "name": "Switch_sender_email5"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Get_info_find_conversation_by_email').first().json.message_id }}",
+        "emailType": "text",
+        "message": "={{ $json.output.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4672,
+        4896
+      ],
+      "id": "7a6973d6-95f3-4385-8472-0cc5b853614d",
+      "name": "Reply_thomas.noam.pro5",
+      "webhookId": "87d22709-30ef-439f-9759-d5e08f2ca247",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "mPXHaC823VX40JhX",
+          "name": "Gmail-account-perso-thomas.noam.pro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Get_info_find_conversation_by_email').first().json.message_id }}",
+        "emailType": "text",
+        "message": "={{ $json.output.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4672,
+        4720
+      ],
+      "id": "61f1018b-1cd2-4d37-8c16-b53fbe31ff85",
+      "name": "Reply_thomasnoam.fr5",
+      "webhookId": "d6e864b8-9f4c-4ae6-98b7-77e0c3887ea8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "PXLXHpOy2A75t1Z4",
+          "name": "Gmail-account-perso2-thomasnoam.fr@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Get_info_find_conversation_by_email').first().json.message_id }}",
+        "emailType": "text",
+        "message": "={{ $json.output.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4672,
+        5040
+      ],
+      "id": "45a3a055-7615-42ef-b866-c9da1b23b55c",
+      "name": "Reply_noam03.fr5",
+      "webhookId": "ff8042b7-75a2-4403-a381-006505bcb115",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "NIiuV0drEIPyfWYJ",
+          "name": "Gmail-account-inbox-noam03.fr@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Get_info_find_conversation_by_email').first().json.message_id }}",
+        "emailType": "text",
+        "message": "={{ $json.output.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4672,
+        5216
+      ],
+      "id": "30096af0-8801-4a84-a263-865530aabfbe",
+      "name": "Reply_noam01.fr5",
+      "webhookId": "bee3bb06-5aef-4a4e-ab4e-0417524d1aa7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Vb6Lxe36CTdLu9j7",
+          "name": "Gmail-account-noam01.fr@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "readStatus": "unread"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        1264,
+        4112
+      ],
+      "id": "3bf12c79-e6e5-4695-b566-a1eed709f685",
+      "name": "Gmail_trigger_thomas.noam.pro1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "mPXHaC823VX40JhX",
+          "name": "Gmail-account-perso-thomas.noam.pro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "readStatus": "unread"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        1376,
+        3936
+      ],
+      "id": "985a8841-5e74-4776-9926-18fa079e2ff1",
+      "name": "Gmail_trigger_thomasnoam.fr1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "PXLXHpOy2A75t1Z4",
+          "name": "Gmail-account-perso2-thomasnoam.fr@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "readStatus": "unread"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        1264,
+        4320
+      ],
+      "id": "52f88316-a036-40ea-99c8-c0d9993683b7",
+      "name": "Gmail_trigger_noam03.fr1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "NIiuV0drEIPyfWYJ",
+          "name": "Gmail-account-inbox-noam03.fr@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "readStatus": "unread"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        1408,
+        4480
+      ],
+      "id": "d437d24c-c384-4b43-b669-64bb17d94153",
+      "name": "Gmail_trigger_noam01.fr1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Vb6Lxe36CTdLu9j7",
+          "name": "Gmail-account-noam01.fr@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "49a7d63c-36e2-4cd7-a0e8-5bf15c776d77",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "c6b2bd0e-49fe-447c-96dd-01fe1a8c2934",
+              "name": "from.value[0].address",
+              "value": "={{ $json.from.value[0].address }}",
+              "type": "string"
+            },
+            {
+              "id": "339aa9cc-ff81-424b-97f1-ef7141f52f81",
+              "name": "to.value[0].address",
+              "value": "={{ $json.to.value[0].address }}",
+              "type": "string"
+            },
+            {
+              "id": "a1b2c3d4-text-field",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "e5f6g7h8-subject-field",
+              "name": "subject",
+              "value": "={{ $json.subject }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1584,
+        4240
+      ],
+      "id": "fd4fc355-364f-4db8-877d-0a3345ba75fb",
+      "name": "Get_info_mail1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4ac666a4-596f-4f02-8f7c-effb79c96055",
+              "name": "relevant",
+              "value": "={{ $json.relevant }}",
+              "type": "boolean"
+            },
+            {
+              "id": "24a87505-081d-4abd-8a1d-c6aba7aba2be",
+              "name": "found",
+              "value": "={{ $json.found }}",
+              "type": "boolean"
+            },
+            {
+              "id": "b417439d-7994-4544-8e21-acff797e6ff9",
+              "name": "conversation_id",
+              "value": "={{ $json.conversation_id }}",
+              "type": "string"
+            },
+            {
+              "id": "bd1e556c-8b2e-49ad-ae7f-edaf5119574b",
+              "name": "agency_id",
+              "value": "={{ $json.agency_id }}",
+              "type": "string"
+            },
+            {
+              "id": "f85867b6-a508-4a46-af15-5a402570c084",
+              "name": "agency_name",
+              "value": "={{ $json.agency_name }}",
+              "type": "string"
+            },
+            {
+              "id": "d65684de-19b6-4e44-ae1f-727d8a4629f4",
+              "name": "agency_email",
+              "value": "={{ $json.agency_email }}",
+              "type": "string"
+            },
+            {
+              "id": "1438dc40-1e75-4ef7-a144-c02bb5a66252",
+              "name": "agency_city",
+              "value": "={{ $json.agency_city }}",
+              "type": "string"
+            },
+            {
+              "id": "32a233db-9cbb-4c6c-8707-f2557d7a6c6a",
+              "name": "conversation_status",
+              "value": "={{ $json.conversation_status }}",
+              "type": "string"
+            },
+            {
+              "id": "c833ea3e-16b3-4fc5-9e61-98c6fe44af61",
+              "name": "sender_email",
+              "value": "={{ $json.sender_email }}",
+              "type": "string"
+            },
+            {
+              "id": "12b51787-a43b-4898-94af-1c4b7e20a216",
+              "name": "last_gmail_message_id",
+              "value": "={{ $json.last_gmail_message_id }}",
+              "type": "string"
+            },
+            {
+              "id": "418ac1ea-3255-4706-8ce5-4a5ff0b0c4ec",
+              "name": "sent_at",
+              "value": "={{ $json.sent_at }}",
+              "type": "string"
+            },
+            {
+              "id": "a19e142e-d0c9-4157-bdd4-89206d42ec4b",
+              "name": "nb_exchanges",
+              "value": "={{ $json.nb_exchanges }}",
+              "type": "number"
+            },
+            {
+              "id": "096809fa-ef8e-4648-b077-01e6ec9f8974",
+              "name": "visio_accepted",
+              "value": "={{ $json.visio_accepted }}",
+              "type": "boolean"
+            },
+            {
+              "id": "f151a9be-b2f2-4ae3-8815-9c5ae44f40ec",
+              "name": "formatted_messages",
+              "value": "={{ $json.formatted_messages }}",
+              "type": "string"
+            },
+            {
+              "id": "74a67029-8cc2-4dac-a1d4-5ee78b885e7e",
+              "name": "message_id",
+              "value": "={{ $('Get_info_mail1').item.json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2992,
+        4016
+      ],
+      "id": "d44b4394-8362-4822-8a02-287b6a67347d",
+      "name": "Get_info_find_conversation_by_email5"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4ac666a4-596f-4f02-8f7c-effb79c96055",
+              "name": "relevant",
+              "value": "={{ $json.relevant }}",
+              "type": "boolean"
+            },
+            {
+              "id": "24a87505-081d-4abd-8a1d-c6aba7aba2be",
+              "name": "found",
+              "value": "={{ $json.found }}",
+              "type": "boolean"
+            },
+            {
+              "id": "b417439d-7994-4544-8e21-acff797e6ff9",
+              "name": "conversation_id",
+              "value": "={{ $json.conversation_id }}",
+              "type": "string"
+            },
+            {
+              "id": "bd1e556c-8b2e-49ad-ae7f-edaf5119574b",
+              "name": "agency_id",
+              "value": "={{ $json.agency_id }}",
+              "type": "string"
+            },
+            {
+              "id": "f85867b6-a508-4a46-af15-5a402570c084",
+              "name": "agency_name",
+              "value": "={{ $json.agency_name }}",
+              "type": "string"
+            },
+            {
+              "id": "d65684de-19b6-4e44-ae1f-727d8a4629f4",
+              "name": "agency_email",
+              "value": "={{ $json.agency_email }}",
+              "type": "string"
+            },
+            {
+              "id": "1438dc40-1e75-4ef7-a144-c02bb5a66252",
+              "name": "agency_city",
+              "value": "={{ $json.agency_city }}",
+              "type": "string"
+            },
+            {
+              "id": "32a233db-9cbb-4c6c-8707-f2557d7a6c6a",
+              "name": "conversation_status",
+              "value": "={{ $json.conversation_status }}",
+              "type": "string"
+            },
+            {
+              "id": "c833ea3e-16b3-4fc5-9e61-98c6fe44af61",
+              "name": "sender_email",
+              "value": "={{ $json.sender_email }}",
+              "type": "string"
+            },
+            {
+              "id": "12b51787-a43b-4898-94af-1c4b7e20a216",
+              "name": "last_gmail_message_id",
+              "value": "={{ $json.last_gmail_message_id }}",
+              "type": "string"
+            },
+            {
+              "id": "418ac1ea-3255-4706-8ce5-4a5ff0b0c4ec",
+              "name": "sent_at",
+              "value": "={{ $json.sent_at }}",
+              "type": "string"
+            },
+            {
+              "id": "a19e142e-d0c9-4157-bdd4-89206d42ec4b",
+              "name": "nb_exchanges",
+              "value": "={{ $json.nb_exchanges }}",
+              "type": "number"
+            },
+            {
+              "id": "096809fa-ef8e-4648-b077-01e6ec9f8974",
+              "name": "visio_accepted",
+              "value": "={{ $json.visio_accepted }}",
+              "type": "boolean"
+            },
+            {
+              "id": "f151a9be-b2f2-4ae3-8815-9c5ae44f40ec",
+              "name": "formatted_messages",
+              "value": "={{ $json.formatted_messages }}",
+              "type": "string"
+            },
+            {
+              "id": "ad03b937-19c4-4982-bef8-fc4d2b66bef3",
+              "name": "message_id",
+              "value": "={{ $json.message_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3184,
+        3920
+      ],
+      "id": "f3accf19-19bc-486b-9b6a-ab3f212bb19d",
+      "name": "Get_info_find_conversation_by_email"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4ac666a4-596f-4f02-8f7c-effb79c96055",
+              "name": "relevant",
+              "value": "={{ $json.relevant }}",
+              "type": "boolean"
+            },
+            {
+              "id": "24a87505-081d-4abd-8a1d-c6aba7aba2be",
+              "name": "found",
+              "value": "={{ $json.found }}",
+              "type": "boolean"
+            },
+            {
+              "id": "b417439d-7994-4544-8e21-acff797e6ff9",
+              "name": "conversation_id",
+              "value": "={{ $json.conversation_id }}",
+              "type": "string"
+            },
+            {
+              "id": "bd1e556c-8b2e-49ad-ae7f-edaf5119574b",
+              "name": "agency_id",
+              "value": "={{ $json.agency_id }}",
+              "type": "string"
+            },
+            {
+              "id": "f85867b6-a508-4a46-af15-5a402570c084",
+              "name": "agency_name",
+              "value": "={{ $json.agency_name }}",
+              "type": "string"
+            },
+            {
+              "id": "d65684de-19b6-4e44-ae1f-727d8a4629f4",
+              "name": "agency_email",
+              "value": "={{ $json.agency_email }}",
+              "type": "string"
+            },
+            {
+              "id": "1438dc40-1e75-4ef7-a144-c02bb5a66252",
+              "name": "agency_city",
+              "value": "={{ $json.agency_city }}",
+              "type": "string"
+            },
+            {
+              "id": "32a233db-9cbb-4c6c-8707-f2557d7a6c6a",
+              "name": "conversation_status",
+              "value": "={{ $json.conversation_status }}",
+              "type": "string"
+            },
+            {
+              "id": "c833ea3e-16b3-4fc5-9e61-98c6fe44af61",
+              "name": "sender_email",
+              "value": "={{ $json.sender_email }}",
+              "type": "string"
+            },
+            {
+              "id": "12b51787-a43b-4898-94af-1c4b7e20a216",
+              "name": "last_gmail_message_id",
+              "value": "={{ $json.last_gmail_message_id }}",
+              "type": "string"
+            },
+            {
+              "id": "418ac1ea-3255-4706-8ce5-4a5ff0b0c4ec",
+              "name": "sent_at",
+              "value": "={{ $json.sent_at }}",
+              "type": "string"
+            },
+            {
+              "id": "a19e142e-d0c9-4157-bdd4-89206d42ec4b",
+              "name": "nb_exchanges",
+              "value": "={{ $json.nb_exchanges }}",
+              "type": "number"
+            },
+            {
+              "id": "096809fa-ef8e-4648-b077-01e6ec9f8974",
+              "name": "visio_accepted",
+              "value": "={{ $json.visio_accepted }}",
+              "type": "boolean"
+            },
+            {
+              "id": "f151a9be-b2f2-4ae3-8815-9c5ae44f40ec",
+              "name": "formatted_messages",
+              "value": "={{ $json.formatted_messages }}",
+              "type": "string"
+            },
+            {
+              "id": "ad03b937-19c4-4982-bef8-fc4d2b66bef3",
+              "name": "message_id",
+              "value": "={{ $json.last_gmail_message_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2992,
+        3840
+      ],
+      "id": "c0028e5c-b86b-4c96-a23b-d2996af3c81b",
+      "name": "Get_info_find_conversation_by_email6"
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1664,
+        3936
+      ],
+      "id": "c02dafd6-c2f4-47e6-8e61-fec50b279b5a",
+      "name": "Mark a message as read",
+      "webhookId": "d5e874aa-9f37-4bdc-af04-94183db343e1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "mPXHaC823VX40JhX",
+          "name": "Gmail-account-perso-thomas.noam.pro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1664,
+        4464
+      ],
+      "id": "6931b85e-c269-4782-a526-8cdf60dffad6",
+      "name": "Mark a message as read1",
+      "webhookId": "d5e874aa-9f37-4bdc-af04-94183db343e1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "NIiuV0drEIPyfWYJ",
+          "name": "Gmail-account-inbox-noam03.fr@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1584,
+        4640
+      ],
+      "id": "d5334913-b7d0-44e2-83d8-bc4e642e6ad3",
+      "name": "Mark a message as read2",
+      "webhookId": "d5e874aa-9f37-4bdc-af04-94183db343e1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Vb6Lxe36CTdLu9j7",
+          "name": "Gmail-account-noam01.fr@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "6037500674",
+        "text": "=j'ai bien rep a {{ $('Get_info_find_conversation_by_email').first().json.agency_name}} c'est bon tqt",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        5408,
+        3936
+      ],
+      "id": "cf9b0d16-df82-4931-8cc4-49bd73f2c683",
+      "name": "Send a text message",
+      "webhookId": "d8113913-798c-438a-9fba-34a0f3bb94e3",
+      "credentials": {
+        "telegramApi": {
+          "id": "iIC8qAQ8AnuSMPqM",
+          "name": "Telegram_bot_prod"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://fimedehqtcpijcfjunlh.supabase.co/rest/v1/rpc/generate_report_email",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_conversation_id\": \"{{ $('Get_info_find_conversation_by_email').item.json.conversation_id }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3600,
+        4064
+      ],
+      "id": "0d86d27b-2601-4770-bc32-38791b099378",
+      "name": "Get_rapport_agence",
+      "credentials": {
+        "supabaseApi": {
+          "id": "aZiXU9v9dYP2TIfw",
+          "name": "Supabase_el-prospector"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://fimedehqtcpijcfjunlh.supabase.co/rest/v1/rpc/generate_revelation_email",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_conversation_id\": \"{{ $('Get_info_find_conversation_by_email').item.json.conversation_id }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3632,
+        4672
+      ],
+      "id": "a36fc23e-c5f1-45c5-b175-3c0e0dfeca69",
+      "name": "Get_message_revelation",
+      "credentials": {
+        "supabaseApi": {
+          "id": "aZiXU9v9dYP2TIfw",
+          "name": "Supabase_el-prospector"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Agent_révélation1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent_révélation1",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Agent_vidéo1",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Agent_visio2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find_conversation_by_email3": {
+      "main": [
+        [
+          {
+            "node": "If_find_conv1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process_agency_response3": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If_find_conv1": {
+      "main": [
+        [
+          {
+            "node": "Code_parse_gmail1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "If_need_response3": {
+      "main": [
+        [
+          {
+            "node": "Switch_sender_email5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Think1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agent_révélation1",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Agent_vidéo1",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Agent_visio2",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Get_message_revelation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get_message_revelation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get_rapport_agence",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agent_visio2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agent_visio2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        [],
+        [
+          {
+            "node": "Get_message_revelation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process_agency_response4": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If_need_response4": {
+      "main": [
+        [
+          {
+            "node": "Switch_sender_email4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent_révélation1": {
+      "main": [
+        [
+          {
+            "node": "If_need_response3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process_agency_response5": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If_need_response5": {
+      "main": [
+        [
+          {
+            "node": "Switch_sender_email3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent_vidéo1": {
+      "main": [
+        [
+          {
+            "node": "If_need_response4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent_visio2": {
+      "main": [
+        [
+          {
+            "node": "If_need_response5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code_parse_gmail1": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find_conversation_by_email4": {
+      "main": [
+        [
+          {
+            "node": "Get_info_find_conversation_by_email5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store_inbound_message1": {
+      "main": [
+        [
+          {
+            "node": "Find_conversation_by_email4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an event in Google Calendar1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agent_visio2",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many events in Google Calendar1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agent_visio2",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message in Telegram1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agent_vidéo1",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Agent_visio2",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Agent_révélation1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Find_conversation_by_email5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find_conversation_by_email5": {
+      "main": [
+        [
+          {
+            "node": "Get_info_find_conversation_by_email6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Store_inbound_message1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unmatched_emails1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unmatched_emails1": {
+      "main": [
+        []
+      ]
+    },
+    "Structured Output Parser4": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Agent_vidéo1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser5": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Agent_visio2",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch_sender_email3": {
+      "main": [
+        [
+          {
+            "node": "Reply_thomasnoam.fr3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply_thomas.noam.pro3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply_noam03.fr3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply_noam01.fr3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply_thomas.noam.pro3": {
+      "main": [
+        [
+          {
+            "node": "Process_agency_response5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply_thomasnoam.fr3": {
+      "main": [
+        [
+          {
+            "node": "Process_agency_response5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply_noam03.fr3": {
+      "main": [
+        [
+          {
+            "node": "Process_agency_response5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply_noam01.fr3": {
+      "main": [
+        [
+          {
+            "node": "Process_agency_response5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch_sender_email4": {
+      "main": [
+        [
+          {
+            "node": "Reply_thomasnoam.fr4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply_thomas.noam.pro4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply_noam03.fr4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply_noam01.fr4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply_thomas.noam.pro4": {
+      "main": [
+        [
+          {
+            "node": "Process_agency_response4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply_thomasnoam.fr4": {
+      "main": [
+        [
+          {
+            "node": "Process_agency_response4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply_noam03.fr4": {
+      "main": [
+        [
+          {
+            "node": "Process_agency_response4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply_noam01.fr4": {
+      "main": [
+        [
+          {
+            "node": "Process_agency_response4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch_sender_email5": {
+      "main": [
+        [
+          {
+            "node": "Reply_thomasnoam.fr5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply_thomas.noam.pro5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply_noam03.fr5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply_noam01.fr5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply_thomas.noam.pro5": {
+      "main": [
+        [
+          {
+            "node": "Process_agency_response3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply_thomasnoam.fr5": {
+      "main": [
+        [
+          {
+            "node": "Process_agency_response3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply_noam03.fr5": {
+      "main": [
+        [
+          {
+            "node": "Process_agency_response3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply_noam01.fr5": {
+      "main": [
+        [
+          {
+            "node": "Process_agency_response3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail_trigger_thomas.noam.pro1": {
+      "main": [
+        [
+          {
+            "node": "Get_info_mail1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Mark a message as read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail_trigger_thomasnoam.fr1": {
+      "main": [
+        [
+          {
+            "node": "Get_info_mail1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Mark a message as read4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail_trigger_noam03.fr1": {
+      "main": [
+        [
+          {
+            "node": "Get_info_mail1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Mark a message as read1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail_trigger_noam01.fr1": {
+      "main": [
+        [
+          {
+            "node": "Get_info_mail1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Mark a message as read2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_info_mail1": {
+      "main": [
+        [
+          {
+            "node": "Find_conversation_by_email3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_info_find_conversation_by_email5": {
+      "main": [
+        [
+          {
+            "node": "Get_info_find_conversation_by_email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_info_find_conversation_by_email": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_info_find_conversation_by_email6": {
+      "main": [
+        [
+          {
+            "node": "Get_info_find_conversation_by_email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_rapport_agence": {
+      "main": [
+        [
+          {
+            "node": "Agent_vidéo1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_message_revelation": {
+      "main": [
+        [
+          {
+            "node": "Agent_révélation1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Webhook": [
+      {
+        "headers": {
+          "host": "n8n.srv915893.hstgr.cloud",
+          "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+          "content-length": "432",
+          "accept": "*/*",
+          "accept-encoding": "gzip, deflate, br, zstd",
+          "accept-language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
+          "content-type": "application/json",
+          "origin": "http://localhost:5173",
+          "priority": "u=1, i",
+          "referer": "http://localhost:5173/",
+          "sec-ch-ua": "\"Chromium\";v=\"146\", \"Not-A.Brand\";v=\"24\", \"Google Chrome\";v=\"146\"",
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": "\"macOS\"",
+          "sec-fetch-dest": "empty",
+          "sec-fetch-mode": "cors",
+          "sec-fetch-site": "cross-site",
+          "x-forwarded-for": "172.18.0.1",
+          "x-forwarded-host": "n8n.srv915893.hstgr.cloud",
+          "x-forwarded-port": "443",
+          "x-forwarded-proto": "https",
+          "x-forwarded-server": "7dab921d4622",
+          "x-real-ip": "172.18.0.1"
+        },
+        "params": {},
+        "query": {},
+        "body": {
+          "conversation_id": "dcc8e59f-885c-4744-b4d1-9b3cacda3154",
+          "agency_id": "4ad46216-1933-4240-9330-2c56e723d4ef",
+          "agency_name": "TEST - Cabinet Durand Immobilier",
+          "agency_email": "s.durand@test-durand-immo.fr",
+          "agency_city": "Cestas",
+          "conversation_status": "revealed",
+          "inbound_content": "Oui pourquoi pas, envoyez-moi ça je suis curieuse de voir.\n\nSophie Durand\nCabinet Durand Immobilier",
+          "subject": "Re: Recherche immobilière - Cestas"
+        },
+        "webhookUrl": "https://n8n.srv915893.hstgr.cloud/webhook/00332d99-5028-41fb-a3be-bef655e5b912-unmatch-email",
+        "executionMode": "production"
+      }
+    ],
+    "Gmail_trigger_thomas.noam.pro1": [
+      {
+        "id": "19cf741ab7197601",
+        "threadId": "19cf62de9744057e",
+        "labelIds": [
+          "UNREAD",
+          "IMPORTANT",
+          "CATEGORY_PERSONAL",
+          "INBOX"
+        ],
+        "sizeEstimate": 11816,
+        "headers": {
+          "delivered-to": "Delivered-To: thomas.noam.pro@gmail.com",
+          "received": "Received: from PARP264MB6865.FRAP264.PROD.OUTLOOK.COM\r\n ([fe80::c3de:ce24:a2d4:a0f4]) by PARP264MB6865.FRAP264.PROD.OUTLOOK.COM\r\n ([fe80::c3de:ce24:a2d4:a0f4%4]) with mapi id 15.20.9632.017; Mon, 16 Mar 2026\r\n 15:26:39 +0000",
+          "x-received": "X-Received: by 2002:a05:690e:4397:b0:64c:b395:17a6 with SMTP id 956f58d0204a3-64e62f1287bmr11087742d50.9.1773674802332;\r\n        Mon, 16 Mar 2026 08:26:42 -0700 (PDT)",
+          "arc-seal": "ARC-Seal: i=1; a=rsa-sha256; s=arcselector10001; d=microsoft.com; cv=none;\r\n b=NyvKnIAc1DWT+fPfHAfc7g4xzRJYesZ0NwKcq99tb0/be+hcXrKFcluhb5AYjefD6ua/Qw/GMDNlQMt5ydGKQikD6/kcpLtWwaki89f1rxVsUx/Wwkv5JLzWJK+kCRZ7CU8Pb2NO071CciTmdIVyvLY45hmCAUTYZxafH8BdasW5sc50+j8/xKY6dVRaK8UkofDoC06xx0UtC7jQOplX8BUX6RnwA80+TlfPQ15NWpPFNVNMlR+boScEF8iRzIfVrrcfcKyh0y6kJDKl1m0b+SkGRZKYxXZLLCI+Swns3XzjccYS/zF4vbJ9KcFYCxz/tp1e2V4+QjeJlLh8OWNTkA==",
+          "arc-message-signature": "ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;\r\n s=arcselector10001;\r\n h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-AntiSpam-MessageData-ChunkCount:X-MS-Exchange-AntiSpam-MessageData-0:X-MS-Exchange-AntiSpam-MessageData-1;\r\n bh=AD6tFzwbu989p/RryIEw0Ze63Q6TWd1xKlCczfJM+9s=;\r\n b=zIS6OBXgxSbsjk6sEetewa18pezuQhYTk0ADb4ZrpJaT6/n4d2FnM5rTMtred90+bHe3I73t/3S1piSpNpt+NdxNWw7rUHfL3hIxy550Jw2L+41Az0HsWI+6ZmKbOamU3rl16VJlzsdtUzcaIbNRJ3bCoqoO/pBtTEhVzoBmNDUHWEAoTbOTMKgxBFgJM1Xj6GQxrkgl7DVjt24uXZHtPzLPl+N42B5/uNxow82vPl7B4Bpm9AsJpqhexa4a94YTIWn/qWxn1b2ssXwUGuwdxtmx/1cqkR7q3u27M7u/AbTNI2wanCp/Jjdbq4nD/ghvay75oaW7RShIc0XiwYSGPA==",
+          "arc-authentication-results": "ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass\r\n smtp.mailfrom=doremus-immobilier.fr; dmarc=pass action=none\r\n header.from=doremus-immobilier.fr; dkim=pass header.d=doremus-immobilier.fr;\r\n arc=none",
+          "return-path": "Return-Path: <contact@doremus-immobilier.fr>",
+          "received-spf": "Received-SPF: pass (google.com: domain of contact@doremus-immobilier.fr designates 2a01:111:f403:c20a::2 as permitted sender) client-ip=2a01:111:f403:c20a::2;",
+          "authentication-results": "authentication-results: dkim=none (message not signed)\r\n header.d=none;dmarc=none action=none header.from=doremus-immobilier.fr;",
+          "from": "From: Contact <contact@doremus-immobilier.fr>",
+          "to": "To: \"thomas.noam.pro@gmail.com\" <thomas.noam.pro@gmail.com>",
+          "subject": "Subject: =?utf-8?B?UkU6IFJlY2hlcmNoZSBpbW1vYmlsacOocmUgLSBRdWluc2Fj?=",
+          "thread-topic": "Thread-Topic: =?utf-8?B?UmVjaGVyY2hlIGltbW9iaWxpw6hyZSAtIFF1aW5zYWM=?=",
+          "thread-index": "Thread-Index: AQHctS8577osqbDIrEakzKa0xOvFWLWxRXIg",
+          "date": "Date: Mon, 16 Mar 2026 15:26:39 +0000",
+          "message-id": "Message-ID:\r\n <PARP264MB6865370F4E092F1500AC20F5E540A@PARP264MB6865.FRAP264.PROD.OUTLOOK.COM>",
+          "references": "References:\r\n <CAEAXPPuVv9y5QWPwdLzPrLbvW5-0jP43Xg-RatED=PDrGEuvUA@mail.gmail.com>",
+          "in-reply-to": "In-Reply-To:\r\n <CAEAXPPuVv9y5QWPwdLzPrLbvW5-0jP43Xg-RatED=PDrGEuvUA@mail.gmail.com>",
+          "accept-language": "Accept-Language: fr-FR, en-US",
+          "content-language": "Content-Language: fr-FR",
+          "x-ms-has-attach": "X-MS-Has-Attach:",
+          "x-ms-tnef-correlator": "X-MS-TNEF-Correlator:",
+          "x-ms-publictraffictype": "x-ms-publictraffictype: Email",
+          "x-ms-traffictypediagnostic": "x-ms-traffictypediagnostic: PARP264MB6865:EE_|PR0P264MB2201:EE_",
+          "x-ms-office365-filtering-correlation-id": "x-ms-office365-filtering-correlation-id: 5fadab77-a2f8-4e5e-79cb-08de83706b75",
+          "x-ms-exchange-senderadcheck": "x-ms-exchange-senderadcheck: 1",
+          "x-ms-exchange-antispam-relay": "x-ms-exchange-antispam-relay: 0",
+          "x-microsoft-antispam": "x-microsoft-antispam:\r\n BCL:0;ARA:13230040|366016|1800799024|376014|38070700021|18002099003|22082099003|56012099003|7053199007;",
+          "x-microsoft-antispam-message-info": "x-microsoft-antispam-message-info:\r\n 5q+6ixfOyCYTXgT4er2uM0de3kWVCbXYwxjmu4cG8HCbec/UVxuU42Kc44o5hPI750c/QpmY/zxKzImV4lTLXNcS3vnOI0iVbZt/Ay4pLywdiHmROAilNX86HBRjdnV/w+4GMxocBeaz6zrJJK7FUYyL2lHRlnwNcIBSzNFyoolHVs2/mlckX+EJThwhMXyTrdnSTlfRbj5OdgdnbVzMxv7/RVH9XrH3RRgEEF8bI0FpVtY/YgQbousJhJ7glKMKZwIBk2jNoRky0qyhOI+3EKy3P48qUq5e0iHpuAc68oLjo5UHjCNeytVfr8FWwAGfwSxLIE8FHRIabNvTv8TKKSR4HS9HZ2cvPxvUBpOyMO9Gt8DqzxxghZ7vl6xT53RQXZbraQyBBuzC+Kj3f7AFGkncn5dvcpqTDZ9Thy3I55C+UpvElqMLWC/keFRHxfq8qG9jGBlkXwG7IkQZMw2HU7eWD8/64BNo3jTzksY5aVy0px4n5qLUnAH3EjVmnZKCe/z4H6wym3v1jIHzKafl6NrqHXCbYv5QfbU1Rdox+llPm1k1vLbF1BnJtzG41XGmZnEDPpFkSItzmc2t0fGYRrEbmw6u1FxCOsAPnSk9NXiRWX1b5OA07tqmnMMjNsUO5F9H21hRcDldZW/bXqjWoQGNU5Gkn8DM1tzsAtnbK+fctw/l9KuYxTuv7Id/vPJUUf6oEsdJ68nODrK7mZHibkLKMf6jEou1WOf99ruMJqR0hUtcclb77/w1ZIn2tR7h3fl0PPFELdPR6Ikco0m9UAHVvOPum7wJeDUY7TzpylM=",
+          "x-forefront-antispam-report": "x-forefront-antispam-report:\r\n CIP:255.255.255.255;CTRY:;LANG:fr;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:PARP264MB6865.FRAP264.PROD.OUTLOOK.COM;PTR:;CAT:NONE;SFS:(13230040)(366016)(1800799024)(376014)(38070700021)(18002099003)(22082099003)(56012099003)(7053199007);DIR:OUT;SFP:1102;",
+          "x-ms-exchange-antispam-messagedata-chunkcount": "x-ms-exchange-antispam-messagedata-chunkcount: 1",
+          "x-ms-exchange-antispam-messagedata-0": "x-ms-exchange-antispam-messagedata-0:\r\n =?utf-8?B?c0xyUHZLcFdYRTRnelpmdTBHYXJ1YlB4cmE3Rm1ScERaTW1IL0JRM0hzSCtz?=\r\n =?utf-8?B?Z0NXR0I3MmNrdVBKT0F4b3hjWU8wekhaUkZEQkRUNllRNEE3eWZQRkZOVitz?=\r\n =?utf-8?B?cXdMekdOVEVJTDB1WVNUV0djalBNd0dqcnRGL2NXRFpaM3hKWjB6NkNKaThE?=\r\n =?utf-8?B?dStOZTI4b3BGRE9YU1hGcVlXd1piaVJWUm93RXdvQXNycGNrN0FJbzRyVjAz?=\r\n =?utf-8?B?U2c4bWFJb25GMlpiZjlVZTk2SEJrd0FES2ZUZVNHckE3eWdJTVU5cUlaOHhs?=\r\n =?utf-8?B?ZXZ0YjVkNTM4U2hkTyt5K1c2SFFBZkx1d0g1YUhKNi9YRW42UEhOWnlJdXpU?=\r\n =?utf-8?B?N3l5RTloSHRjbERqd0R3UXRWU1FXSFJSNnRGZ2IvUmx2aXhuNGVHQzZ5eldM?=\r\n =?utf-8?B?SnlySlJWVEI3RXZWOFBRRjJERFFSNmVWcE9NWm14NUpHMDEzTXZ6SFN3RVBE?=\r\n =?utf-8?B?SnRrNDFFb2FjbkpsRlA5T01FU29mVi9aSlFXSlFVSTJtOTVhSURlTEkwQTFv?=\r\n =?utf-8?B?NGJ4cmhFdHJUMnZybmNHd2JkU2hadUtsYVBEWW11MFpOYVZzVm1uTHpCZlYw?=\r\n =?utf-8?B?NlVET0luOFd0QzYzRGJveGVteGJyV3lMdCtIL2VVUGNOays4V3ROYXV4TVk1?=\r\n =?utf-8?B?dGE5THVHWWNZUUpNcHBSem5qME1VTU5wMHdRYUJyaG1NS2EvS1Y1NW8ramtK?=\r\n =?utf-8?B?eWVIYWgwKzNpOHlOMHdadFloUUxYTWlqK0U3Q1pVUlBBaUQ5WlBidFo3bWpM?=\r\n =?utf-8?B?N3VzN1dJKzhGUS9oRk1lU242ekJtelc5ZmsrajBUUzFUMENhOUhTOE1NYjl5?=\r\n =?utf-8?B?cWNGb3dQckZuVmVYRVNQNEhLRHJlRDVDb1Z2SUtvYmZ4OVp4QjlhbEptcjJV?=\r\n =?utf-8?B?cnVtV3lmTXd1ZjNYcHFnQktsQnNRTmZod0NoeSt6bnN6NU1jUmM3aFVTQ3pQ?=\r\n =?utf-8?B?N2pVSVErNmFXMHhjSGgrc2l5QjVUT2dSODJ0a0RhcHhtQnUrbldoVlBaNU1h?=\r\n =?utf-8?B?Q2JKRkszSDhVS3BWRStISGxZYkpNcmgwSDBPVU1EUUZwdEgyckhEWUdoU3Aw?=\r\n =?utf-8?B?cFZQRDlIMGVXdzV0VDhGeXNXNyt6Y21GMVkyRXpMQWZYRlgwc1hMcHNoZytR?=\r\n =?utf-8?B?eXBhbEJXeGZzMVI0ckpLRFAreXUxZ3VuK3FNRXlOVHovMGU0WTNUSDdKT08x?=\r\n =?utf-8?B?YmJsOG9JbUppZWRtb2RkVnlLNExSeldabno5dUE5elhnZFJnMU91ZmRCYnFH?=\r\n =?utf-8?B?Q056VFR1ZFFLeHBGaEpMck42cWJqR3pwWFQ2clRKK05VUjFlNkloaHQwWE9H?=\r\n =?utf-8?B?QTBWM0tKeFVuWXd0NmhQRHViQnZMdXNaWURKQ3F4T05WTmp2Nmdya1BkK3N4?=\r\n =?utf-8?B?UDQ0Z0szQlQvSWIxcDJDL1VZOHNKM1FwM2JVSWJySkdKVmo0bTNLam1ZeUtD?=\r\n =?utf-8?B?Z1ovSElnb3I3OHhZNVF5ZjZwU1ZLNWtRYXF2aFRwZzZ2WnhvVnNzdmtRcm52?=\r\n =?utf-8?B?aVhseWg5bC9ib3U3MlZlTTdaQmJmWEc3WkdVTmdkUEZ5aytqK2tzenR4ejNV?=\r\n =?utf-8?B?U1VJeEdiRU5NRlVzbmxoY1k2alNCR3J0WVpvMWlrY2FaR2NWdmdXVUFyZWFx?=\r\n =?utf-8?B?b3Y5bUtJUVRxQTBFTUtVcHV3a2VDUXNHTlBrLyt1N05vMHQ0NkRSZDZmOEMv?=\r\n =?utf-8?B?R1BFcHhaMk9ZeXlJRGk0cHMvN2pMZGhSek5lc2ZhRWVJNm12SExidElRcWxK?=\r\n =?utf-8?B?UXhVa2lyZ3h1aDBaYVhUQUZJMUZrSFZuZ1l5eXUvQ2hhOWJsNVR1YW5NWWVG?=\r\n =?utf-8?B?TXk3MENkTWZkdUNvR2EwTkR2YXNCWStuQWJpeGtiQ2o2TW5XOENwb2pGTEll?=\r\n =?utf-8?B?YW0zRmN6a2hSSE1GWXhRK2tjN3ZzdURsNEZPaUNMU3FvY09ZSVFZZldGUm8w?=\r\n =?utf-8?B?Mjc5dXZrQ21vZzk3Skp3b1ZjWlNnWXY4eFZxV1M2Nko5cGQybnZCajk5cUc2?=\r\n =?utf-8?B?djZOSmlMajBiOTZKa1BlZHRFWmc5MkF2cmpJRGlWbWhYQjVTcnkwTlJBUUtS?=\r\n =?utf-8?B?WXFtUGlENHdvREtUNEd1N2FLOTJwM2xBS3k3M1JtL3NMNWliUk9Fc1dDdnNU?=\r\n =?utf-8?B?aHI4TGRjZDFXTWQ5bjd5N1JDWE8zbVVieWx4R21XZS9wOVh1Nlc2aXFaWU9I?=\r\n =?utf-8?B?YkdJb0EwSzdkUmwxOGVpeDlnbVdINW9WalFLOU9aMys5M3NReVhHNmw1VkEy?=\r\n =?utf-8?B?UWdFdFhTdU9nOEhDNjJHbVQrWmt2elpQUmUzbnc0ZVZJZkFPNExNTEJSWitQ?=\r\n =?utf-8?B?MWRBOHNIOGVQbXNBeTJhS1NtbVl4aVVtOHlKNkhBcmJQemltb3VoQy9wdngy?=\r\n =?utf-8?Q?+Us7tepwsWOgYlRU=3D?=",
+          "content-type": "Content-Type: text/plain; charset=\"utf-8\"",
+          "content-transfer-encoding": "Content-Transfer-Encoding: base64",
+          "mime-version": "MIME-Version: 1.0",
+          "x-originatororg": "X-OriginatorOrg: doremus-immobilier.fr",
+          "x-ms-exchange-crosstenant-authas": "X-MS-Exchange-CrossTenant-AuthAs: Internal",
+          "x-ms-exchange-crosstenant-authsource": "X-MS-Exchange-CrossTenant-AuthSource: PARP264MB6865.FRAP264.PROD.OUTLOOK.COM",
+          "x-ms-exchange-crosstenant-network-message-id": "X-MS-Exchange-CrossTenant-Network-Message-Id: 5fadab77-a2f8-4e5e-79cb-08de83706b75",
+          "x-ms-exchange-crosstenant-originalarrivaltime": "X-MS-Exchange-CrossTenant-originalarrivaltime: 16 Mar 2026 15:26:39.4983\r\n (UTC)",
+          "x-ms-exchange-crosstenant-fromentityheader": "X-MS-Exchange-CrossTenant-fromentityheader: Hosted",
+          "x-ms-exchange-crosstenant-id": "X-MS-Exchange-CrossTenant-id: 7a802d51-8e01-47a9-83f5-4f261eacfc59",
+          "x-ms-exchange-crosstenant-mailboxtype": "X-MS-Exchange-CrossTenant-mailboxtype: HOSTED",
+          "x-ms-exchange-crosstenant-userprincipalname": "X-MS-Exchange-CrossTenant-userprincipalname: l2Vcm9MoLufwb1AZHZKm9+RO/6o5pmqcwq6jeT4/zz3mt8Tpjc+bZthvtL8r7uxooL8OXvZXFn0zzxNht7vd+BlrRIM12lvztZb/oRSo9zs=",
+          "x-ms-exchange-transport-crosstenantheadersstamped": "X-MS-Exchange-Transport-CrossTenantHeadersStamped: PR0P264MB2201"
+        },
+        "text": "Bonjour Monsieur,\n\nL'agence se situe à QUINSAC 33360, 17 Place Aristide Briand.\nJe suis à votre disposition pour faire le point sur votre recherche.\nN'hésitez pas à me contacter.\n\nDOREMUS IMMOBILIER\nBertrand Windal\n05.33.89.42.85\n\n\n-----Message d'origine-----\nDe : thomas.noam.pro@gmail.com <thomas.noam.pro@gmail.com> \nEnvoyé : lundi 16 mars 2026 11:25\nÀ : Contact <contact@doremus-immobilier.fr>\nObjet : Recherche immobilière - Quinsac\n\nBonjour, vous êtes bien situé à Quinsac ? Je commence à chercher dans le secteur.\n\nNoam\n",
+        "textAsHtml": "<p>Bonjour Monsieur,</p><p>L&apos;agence se situe &agrave; QUINSAC 33360, 17 Place Aristide Briand.<br/>Je suis &agrave; votre disposition pour faire le point sur votre recherche.<br/>N&apos;h&eacute;sitez pas &agrave; me contacter.</p><p>DOREMUS IMMOBILIER<br/>Bertrand Windal<br/>05.33.89.42.85</p><p>-----Message d&apos;origine-----<br/>De&nbsp;: <a href=\"mailto:thomas.noam.pro@gmail.com\">thomas.noam.pro@gmail.com</a> &lt;<a href=\"mailto:thomas.noam.pro@gmail.com\">thomas.noam.pro@gmail.com</a>&gt;<br/>Envoy&eacute;&nbsp;: lundi 16 mars 2026 11:25<br/>&Agrave;&nbsp;: Contact &lt;<a href=\"mailto:contact@doremus-immobilier.fr\">contact@doremus-immobilier.fr</a>&gt;<br/>Objet&nbsp;: Recherche immobili&egrave;re - Quinsac</p><p>Bonjour, vous &ecirc;tes bien situ&eacute; &agrave; Quinsac ? Je commence &agrave; chercher dans le secteur.</p><p>Noam</p>",
+        "subject": "RE: Recherche immobilière - Quinsac",
+        "references": "<CAEAXPPuVv9y5QWPwdLzPrLbvW5-0jP43Xg-RatED=PDrGEuvUA@mail.gmail.com>",
+        "date": "2026-03-16T15:26:39.000Z",
+        "to": {
+          "value": [
+            {
+              "address": "thomas.noam.pro@gmail.com",
+              "name": ""
+            }
+          ],
+          "html": "<span class=\"mp_address_group\"><a href=\"mailto:thomas.noam.pro@gmail.com\" class=\"mp_address_email\">thomas.noam.pro@gmail.com</a></span>",
+          "text": "thomas.noam.pro@gmail.com"
+        },
+        "from": {
+          "value": [
+            {
+              "address": "contact@doremus-immobilier.fr",
+              "name": "Contact"
+            }
+          ],
+          "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">Contact</span> &lt;<a href=\"mailto:contact@doremus-immobilier.fr\" class=\"mp_address_email\">contact@doremus-immobilier.fr</a>&gt;</span>",
+          "text": "\"Contact\" <contact@doremus-immobilier.fr>"
+        },
+        "messageId": "<PARP264MB6865370F4E092F1500AC20F5E540A@PARP264MB6865.FRAP264.PROD.OUTLOOK.COM>",
+        "inReplyTo": "<CAEAXPPuVv9y5QWPwdLzPrLbvW5-0jP43Xg-RatED=PDrGEuvUA@mail.gmail.com>",
+        "html": false
+      }
+    ],
+    "Gmail_trigger_noam01.fr1": [
+      {
+        "id": "19d00d1f6bfbd929",
+        "threadId": "19d00733c6fdd36b",
+        "labelIds": [
+          "UNREAD",
+          "INBOX"
+        ],
+        "sizeEstimate": 11631,
+        "headers": {
+          "delivered-to": "Delivered-To: noam01.fr@gmail.com",
+          "received": "Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])\r\n        by mx.google.com with SMTPS id 586e51a60fabf-41bd2939feasor1134656fac.7.2026.03.18.05.00.53\r\n        for <noam01.fr@gmail.com>\r\n        (Google Transport Security);\r\n        Wed, 18 Mar 2026 05:00:53 -0700 (PDT)",
+          "x-received": "X-Received: by 2002:a05:6871:8915:b0:417:3a1e:eeb2 with SMTP id\r\n 586e51a60fabf-41bd4167949mr2007759fac.26.1773835250896; Wed, 18 Mar 2026\r\n 05:00:50 -0700 (PDT)",
+          "arc-seal": "ARC-Seal: i=1; a=rsa-sha256; t=1773835253; cv=none;\r\n        d=google.com; s=arc-20240605;\r\n        b=THeXJ1Mzq19Qv3VJVL7O8tPHjMdrwTLDTmhjxsIIkQ1YB1WNNqdr1cMoXnR0bV2foT\r\n         Utr9xmbBKLqmv5XOgSAXzVD8B43ovpVdSJ4Vq9+WzNIMUuZuu8DuUF1wrDp1TQDXvcYN\r\n         Bnj6gC3twPTijHt0qagD5sDvy3Yin1E7ksAsXa3ak2B/LL6C8ZSns6w4HTSfPhD7QR6m\r\n         xwfY5sKNSuT26B0FnVSCXGDkFra3kamLYneYV/CtLXEUDFy05+VtvIEBMJ5De7qlvI5B\r\n         N5VKNE36zoC0y+B9UuMySRfF784FV/K/234lKDi6cERr9U2L/NcPrgBRpHHrhVs6W98n\r\n         e55g==",
+          "arc-message-signature": "ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;\r\n        h=to:subject:message-id:date:from:in-reply-to:references:mime-version\r\n         :dkim-signature;\r\n        bh=tKvtJZfN67tW49HygSgC0bkSlUBzs0L9s4RhOhZTDYg=;\r\n        fh=PYMK2GyNmiwj1lTjXK5I6CfPwuU75Sm+T9h/hE2yVVo=;\r\n        b=kpEZgVAbHt6HiFZSIc3fxXZRnPj/ycZceo+OO0i5AR1G0SDdH2MLgWL1egevs3cnzC\r\n         qCMpIcewCxEOREI/00nAcIQ7aXsSdqzeGOepDOSkn3AOBJwfQLN8ztVefRlf7+OKrGbB\r\n         3z6vlCdFkC8A0fZUQieKa082oKG+jK7Q+tQuZXX2tohrZU8bSLTDEoI7CX3GHFB++lGG\r\n         3pOyMpPqEKHd/9BsLlEy32k3QkcCg/ov/GXuPT4EzUEZ670D5T/9Y5q0pMUEtPGVwC33\r\n         nqHbVgEd6oMJiUFehllM5m4tnsqTpJ+2l0wP3xKgUVIIoYkrfXdRxNR52/Pw/hZCkeBA\r\n         /brA==;\r\n        dara=google.com",
+          "arc-authentication-results": "ARC-Authentication-Results: i=1; mx.google.com; arc=none",
+          "return-path": "Return-Path: <apparcel.cestas@ajp-immobilier.com>",
+          "received-spf": "Received-SPF: pass (google.com: domain of apparcel.cestas@ajp-immobilier.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;",
+          "authentication-results": "Authentication-Results: mx.google.com;\r\n       dkim=pass header.i=@ajp-immobilier.com header.s=google header.b=GgW2sE5Y;\r\n       arc=pass (i=1);\r\n       spf=pass (google.com: domain of apparcel.cestas@ajp-immobilier.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=apparcel.cestas@ajp-immobilier.com;\r\n       dmarc=pass (p=QUARANTINE sp=NONE dis=NONE) header.from=ajp-immobilier.com;\r\n       dara=pass header.i=@gmail.com",
+          "dkim-signature": "DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;\r\n        d=ajp-immobilier.com; s=google; t=1773835253; x=1774440053; dara=google.com;\r\n        h=to:subject:message-id:date:from:in-reply-to:references:mime-version\r\n         :from:to:cc:subject:date:message-id:reply-to;\r\n        bh=tKvtJZfN67tW49HygSgC0bkSlUBzs0L9s4RhOhZTDYg=;\r\n        b=GgW2sE5YNpJOwKJru3GRl9vtFATyrodfv7nCHEHsx9VuNxgZttR91zn81UG25fgoGF\r\n         9aC0maia3bA4qJAGMACpfONVWS1znU9pdTDFsg+BY8C5L2NHx2jpvlss9SvznLk6IxHy\r\n         tDPZ8+096bWLVtAWX8tLuOY3rN7FgNVAm/xgw=",
+          "x-google-dkim-signature": "X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;\r\n        d=1e100.net; s=20251104; t=1773835253; x=1774440053;\r\n        h=to:subject:message-id:date:from:in-reply-to:references:mime-version\r\n         :x-gm-gg:x-gm-message-state:from:to:cc:subject:date:message-id\r\n         :reply-to;\r\n        bh=tKvtJZfN67tW49HygSgC0bkSlUBzs0L9s4RhOhZTDYg=;\r\n        b=QOWqnCbOv7pFc3M+ZDtT4vOCaaQn74bWlY1Tcw+L3yMEmoVm0HUJXvll5HfeVs0c7L\r\n         GqDAA2/o75b3eQBiBgwzJyf3JTkUuP9OeaYfQB5eum32um1a9jMClVAGzapLB4+K4j2f\r\n         mlFDeJ5eVuDN5ypQ2NiGj7ogw8MRsqNWZ7CB9L7let+iNhywGQgj3xCIbpdOGKvxBv2C\r\n         tMK9m/a3iMJ3UpYUHLkGSF9yNax63A/QMEGl/c/voCaXF3ENjvpIQTmE3VUPN5mhv1/2\r\n         ipFMBD6mK7gTuys9qcffPdCYwloLbGz5Sh661PBhRQSpiYYhyNgGkQ+ReHfa7+eAf19U\r\n         BBdg==",
+          "x-gm-message-state": "X-Gm-Message-State: AOJu0YxwoQIg+HEYs91z5Dib/5SKlZb9IkkxBRpehlVR8uu1kAVqxSwB\r\n\texEqXOjfIHh0QUcmWJ41HgGKFZTuHdQc0GeWDmKJzbSRMJsKtgS3cMxwukxj/mN6ndGTbc1FprY\r\n\t9il2YSbLhbmfcLE/KmjSwmSSHacoqg6lCc+4tQ9RSRGOG3da4Y8I=",
+          "x-gm-gg": "X-Gm-Gg: ATEYQzys90kiAyv4pQYBmZkrYgEK5D8YdpEjHnVgvPRr+pX/AMOgUlkfZN3G25SgDKf\r\n\t058/4AuDv8B/41jWlOhzO7WJXxe2xl40jJDxP/UWbJaEOV8A0nAU0Q+XD+SnPZQuLAMavJRbhs1\r\n\tU5bMVweTrvEgA9C4CL+m86VVbTe4giz5KV3hNKXSgNxqePKMzgM9FV/5X5O9+RlhyxEg7jQKekS\r\n\ttnckn7HW0BDmEaXFVNPvxpJD3fNK/5JiW8hEGe1zTL7lRzbUXeFkav/XNk4ygCAJMk7crqjyQJ0\r\n\tiYlk7cU4",
+          "mime-version": "MIME-Version: 1.0",
+          "references": "References: <CALv5BRYE5aMp-h779SxpirHBq=qt4gSUcu3sdN5BpJqv3J_QdA@mail.gmail.com>",
+          "in-reply-to": "In-Reply-To: <CALv5BRYE5aMp-h779SxpirHBq=qt4gSUcu3sdN5BpJqv3J_QdA@mail.gmail.com>",
+          "from": "From: Catherine APPARCEL <apparcel.cestas@ajp-immobilier.com>",
+          "date": "Date: Wed, 18 Mar 2026 13:00:40 +0100",
+          "x-gm-features": "X-Gm-Features: AaiRm52mfMNihf1DBdw0IlCaOuvyP-4mb16dy6AOK4CP9IjRAvXUHCixWNjN05Y",
+          "message-id": "Message-ID: <CAJppFzi+7uFuziH9Ek2WSY_Efq-GNcPt2YkqgrO5w++mM6UqRQ@mail.gmail.com>",
+          "subject": "Subject: Re: Recherche sur Cestas",
+          "to": "To: noam01.fr@gmail.com",
+          "content-type": "Content-Type: multipart/alternative; boundary=\"000000000000051e9c064d4b3455\""
+        },
+        "html": "<div dir=\"ltr\">Bonjour<div>Oui nous sommes sur le bourg de Cestas</div><div>Que recherchez vous?</div><div>Je vous remercie de bien vouloir nous transmettre vos coordonnées téléphonique par retour.</div><div>Bien cordialement</div></div><br><div class=\"gmail_quote gmail_quote_container\"><div dir=\"ltr\" class=\"gmail_attr\">Le mer. 18 mars 2026 à 11:17, &lt;<a href=\"mailto:noam01.fr@gmail.com\">noam01.fr@gmail.com</a>&gt; a écrit :<br></div><blockquote class=\"gmail_quote\" style=\"margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex\">Bonjour, je commence à regarder pour m&#39;installer sur Cestas, vous<br>\ntravaillez bien sur ce secteur ?<br>\n<br>\nNoam<br>\n<br>\n<br>\n</blockquote></div><div><br clear=\"all\"></div><div><br></div><span class=\"gmail_signature_prefix\">-- </span><br><div dir=\"ltr\" class=\"gmail_signature\"><br><br>\n<div style=\"font-family:&quot;Source Sans Pro&quot;,sans-serif;color:rgb(30,22,54)\">\n<table style=\"border-collapse:collapse;border-left:1px solid rgb(30,22,54);width:600px\">\n<tbody>\n<tr style=\"vertical-align:middle\">\n<td style=\"font-size:12px;padding-left:5px\"><span style=\"font-weight:bold\">Catherine APPARCEL</span><span style=\"color:rgb(26,88,114)\">, Conseillère Transaction</span></td>\n</tr>\n<tr>\n<td style=\"font-size:12px;color:rgb(26,88,114);padding-left:5px\">06 63 45 42 75</td>\n</tr>\n<tr>\n<td style=\"padding-top:10px;font-size:10px;padding-left:5px\">AJP Immobilier Cestas</td>\n</tr>\n<tr>\n<td style=\"font-size:10px;color:rgb(26,88,114);padding-left:5px\">14 place du Souvenir | 33610 CESTAS . 05 56 78 29 79</td>\n</tr>\n<tr>\n<td style=\"padding-left:5px\"><a style=\"text-decoration:none\" href=\"https://www.facebook.com/ajpimmobilierfrance\" rel=\"noopener\" target=\"_blank\"> <img style=\"height: 20px; width: 20px;\" src=\"https://storage.googleapis.com/ajp-immobilier.i-signature.fr/Picto_Facebook_AJP.png\" width=\"20\" height=\"20\"> </a> <a style=\"text-decoration:none\" href=\"https://www.linkedin.com/company/ajp-immobilier-france/\" rel=\"noopener\" target=\"_blank\"> <img style=\"height: 20px; width: 20px;\" src=\"https://storage.googleapis.com/ajp-immobilier.i-signature.fr/Picto_Linkedin_AJP.png\" width=\"20\" height=\"20\"> </a> <a style=\"text-decoration:none\" href=\"https://www.instagram.com/ajpimmobilierfrance/\" rel=\"noopener\" target=\"_blank\"> <img style=\"height: 20px; width: 20px;\" src=\"https://storage.googleapis.com/ajp-immobilier.i-signature.fr/Picto_Instagram_AJP.png\" width=\"20\" height=\"20\"> </a> <a style=\"text-decoration:none;font-size:10px;color:rgb(30,22,54);font-family:sans-serif;font-weight:1000;vertical-align:middle;margin-left:20px\" href=\"https://www.ajp-immobilier.com\" rel=\"noopener\" target=\"_blank\"> www.ajp-immobilier.com </a></td>\n</tr>\n</tbody>\n</table>\n<table style=\"border-collapse:collapse;width:600px\">\n<tbody>\n<tr style=\"border:none\">\n<td><a href=\"https://www.ajp-immobilier.com/immo-gestion/offre3mois2026.htm\" target=\"_blank\"><img style=\"width: 600px; height: 167px;\" src=\"https://storage.googleapis.com/ajp-immobilier.i-signature.fr/SIGNATURE_OFFRE_GESTION_2026_web.jpg\" width=\"600\" height=\"167\"></a></td>\n</tr>\n<tr style=\"border:none\">\n<td><img style=\"width: 600px; height: 120px;\" src=\"https://storage.googleapis.com/ajp-immobilier.i-signature.fr/AJP_BanniereBasse_fixeplusde14500.jpg\" width=\"600\" height=\"113\"></td>\n</tr>\n</tbody>\n</table>\n</div></div>\n",
+        "text": "Bonjour\nOui nous sommes sur le bourg de Cestas\nQue recherchez vous?\nJe vous remercie de bien vouloir nous transmettre vos coordonnées\ntéléphonique par retour.\nBien cordialement\n\nLe mer. 18 mars 2026 à 11:17, <noam01.fr@gmail.com> a écrit :\n\n> Bonjour, je commence à regarder pour m'installer sur Cestas, vous\n> travaillez bien sur ce secteur ?\n>\n> Noam\n>\n>\n>\n\n-- \n\n\nCatherine APPARCEL, Conseillère Transaction\n06 63 45 42 75\nAJP Immobilier Cestas\n14 place du Souvenir | 33610 CESTAS . 05 56 78 29 79\n<https://www.facebook.com/ajpimmobilierfrance>\n<https://www.linkedin.com/company/ajp-immobilier-france/>\n<https://www.instagram.com/ajpimmobilierfrance/> www.ajp-immobilier.com\n<https://www.ajp-immobilier.com/immo-gestion/offre3mois2026.htm>\n",
+        "textAsHtml": "<p>Bonjour<br/>Oui nous sommes sur le bourg de Cestas<br/>Que recherchez vous?<br/>Je vous remercie de bien vouloir nous transmettre vos coordonn&eacute;es<br/>t&eacute;l&eacute;phonique par retour.<br/>Bien cordialement</p><p>Le mer. 18 mars 2026 &agrave; 11:17, &lt;<a href=\"mailto:noam01.fr@gmail.com\">noam01.fr@gmail.com</a>&gt; a &eacute;crit :</p><p>&gt; Bonjour, je commence &agrave; regarder pour m&apos;installer sur Cestas, vous<br/>&gt; travaillez bien sur ce secteur ?<br/>&gt;<br/>&gt; Noam<br/>&gt;<br/>&gt;<br/>&gt;</p><p>--</p><p>Catherine APPARCEL, Conseill&egrave;re Transaction<br/>06 63 45 42 75<br/>AJP Immobilier Cestas<br/>14 place du Souvenir | 33610 CESTAS . 05 56 78 29 79<br/>&lt;<a href=\"https://www.facebook.com/ajpimmobilierfrance\">https://www.facebook.com/ajpimmobilierfrance</a>&gt;<br/>&lt;<a href=\"https://www.linkedin.com/company/ajp-immobilier-france/\">https://www.linkedin.com/company/ajp-immobilier-france/</a>&gt;<br/>&lt;<a href=\"https://www.instagram.com/ajpimmobilierfrance/\">https://www.instagram.com/ajpimmobilierfrance/</a>&gt; <a href=\"http://www.ajp-immobilier.com\">www.ajp-immobilier.com</a><br/>&lt;<a href=\"https://www.ajp-immobilier.com/immo-gestion/offre3mois2026.htm\">https://www.ajp-immobilier.com/immo-gestion/offre3mois2026.htm</a>&gt;</p>",
+        "subject": "Re: Recherche sur Cestas",
+        "references": "<CALv5BRYE5aMp-h779SxpirHBq=qt4gSUcu3sdN5BpJqv3J_QdA@mail.gmail.com>",
+        "date": "2026-03-18T12:00:40.000Z",
+        "to": {
+          "value": [
+            {
+              "address": "noam01.fr@gmail.com",
+              "name": ""
+            }
+          ],
+          "html": "<span class=\"mp_address_group\"><a href=\"mailto:noam01.fr@gmail.com\" class=\"mp_address_email\">noam01.fr@gmail.com</a></span>",
+          "text": "noam01.fr@gmail.com"
+        },
+        "from": {
+          "value": [
+            {
+              "address": "apparcel.cestas@ajp-immobilier.com",
+              "name": "Catherine APPARCEL"
+            }
+          ],
+          "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">Catherine APPARCEL</span> &lt;<a href=\"mailto:apparcel.cestas@ajp-immobilier.com\" class=\"mp_address_email\">apparcel.cestas@ajp-immobilier.com</a>&gt;</span>",
+          "text": "\"Catherine APPARCEL\" <apparcel.cestas@ajp-immobilier.com>"
+        },
+        "messageId": "<CAJppFzi+7uFuziH9Ek2WSY_Efq-GNcPt2YkqgrO5w++mM6UqRQ@mail.gmail.com>",
+        "inReplyTo": "<CALv5BRYE5aMp-h779SxpirHBq=qt4gSUcu3sdN5BpJqv3J_QdA@mail.gmail.com>"
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4a4a3572c025b273e3c53d1044b186e42ed8b92543e9bbb4da32d17e17c73c88"
+  }
+}

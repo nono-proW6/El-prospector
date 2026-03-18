@@ -1,0 +1,519 @@
+{
+  "name": "el-prospector-relance",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "d891d3f9-74c7-4b25-8fb3-a91af6fd5b54-relance",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-800, 300],
+      "id": "35ee7ec8-deb9-4f5e-88d2-e5eeef8d7a71",
+      "name": "Webhook_relance",
+      "webhookId": "d891d3f9-74c7-4b25-8fb3-a91af6fd5b54"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-gmail-id",
+              "leftValue": "={{ $json.last_gmail_message_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-560, 300],
+      "id": "if-check-gmail-id",
+      "name": "If_has_gmail_id"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "routableProperty": "={{ $json.conversation_status }}",
+              "value": "sent",
+              "outputKey": "sent"
+            },
+            {
+              "routableProperty": "={{ $json.conversation_status }}",
+              "value": "prospect_phase",
+              "outputKey": "prospect_phase"
+            },
+            {
+              "routableProperty": "={{ $json.conversation_status }}",
+              "value": "revealed",
+              "outputKey": "revealed"
+            },
+            {
+              "routableProperty": "={{ $json.conversation_status }}",
+              "value": "video_sent",
+              "outputKey": "video_sent"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [-300, 300],
+      "id": "switch-status",
+      "name": "Switch_status"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "## Identité\n\nTu es Noam Thomas, un particulier qui cherche un bien immobilier. Tu as envoyé un premier email à une agence et elle n'a pas répondu. Tu dois rédiger une relance.\n\n## Contexte\n\n- **Agence** : {{ $('Webhook_relance').item.json.agency_name }} ({{ $('Webhook_relance').item.json.agency_city }})\n- **Sans réponse depuis** : {{ $('Webhook_relance').item.json.no_answer_since }}\n- **Statut** : Premier contact envoyé, aucune réponse\n\n### Historique de la conversation\n\n{{ $('Webhook_relance').item.json.formatted_messages }}\n\n## Ta mission\n\nRédige une relance courte et naturelle pour ce premier email resté sans réponse.\n\n## Règles\n\n- **Court** : 2-3 lignes max, comme un vrai particulier qui relance vite fait\n- **Naturel** : Ton poli mais pas formel, comme quelqu'un qui re-checke si son email a été vu\n- **Pas agressif** : Pas de reproche, pas de \"je n'ai pas eu de réponse\", pas de culpabilisation\n- **Donne envie de répondre** : Reformule légèrement ton intérêt ou pose une petite question\n- **Cohérent avec l'historique** : Relis le premier email envoyé et fais référence naturellement au bien ou à ta recherche\n- **Signe juste avec le prénom** : Noam\n- **Pas de formule pompeuse** : Pas de \"je me permets de\", \"n'hésitez pas\", \"cordialement\"\n- **Varie le style** : Ne commence pas par \"Bonjour\" systématiquement, parfois un simple \"Rebonjour\" ou directement la question\n\n## Exemples de ton attendu\n\n- \"Rebonjour, je reviens vers vous pour l'appartement rue X — il est toujours disponible ? Noam\"\n- \"Bonjour, je vous avais contacté pour le T3 à Lyon, vous auriez un créneau pour une visite cette semaine ? Noam\"\n- \"Hello, petit message pour savoir si vous aviez pu voir mon email concernant le bien à Marseille. Merci ! Noam\"\n\n## Format de sortie\n\nRéponds UNIQUEMENT avec le texte du message de relance, rien d'autre. Pas de JSON, pas de champ, juste le texte brut du message."
+        },
+        "promptType": "define"
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [-20, 60],
+      "id": "agent-relance-cold",
+      "name": "Agent_relance_cold"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "## Identité\n\nTu es Noam Thomas, un particulier qui cherche un bien immobilier. Tu étais en discussion avec une agence (elle avait répondu à ton email), mais la conversation s'est arrêtée.\n\n## Contexte\n\n- **Agence** : {{ $('Webhook_relance').item.json.agency_name }} ({{ $('Webhook_relance').item.json.agency_city }})\n- **Sans réponse depuis** : {{ $('Webhook_relance').item.json.no_answer_since }}\n- **Statut** : Discussion en cours (phase prospect), l'agence avait répondu puis silence\n\n### Historique complet de la conversation\n\n{{ $('Webhook_relance').item.json.formatted_messages }}\n\n## Ta mission\n\nRédige une relance naturelle qui reprend le fil de la conversation.\n\n## Règles\n\n- **Court** : 2-4 lignes max\n- **Contextuel** : Fais référence au dernier échange — montre que tu suis la conversation, pas que tu envoies un template\n- **Naturel** : Comme un vrai prospect qui relance parce qu'il est vraiment intéressé\n- **Pas agressif** : Pas de \"vous n'avez pas répondu\", pas de reproche\n- **Proactif** : Propose quelque chose (visite, appel, question précise) plutôt que juste \"vous avez eu le temps de regarder ?\"\n- **Cohérent temporellement** : Si ça fait 2 jours, c'est une relance douce. Si ça fait 7 jours, tu peux être un peu plus direct.\n- **Signe** : Noam\n- **Pas de formule pompeuse**\n\n## Exemples de ton attendu\n\n- \"Bonjour, je reviens vers vous suite à notre échange — vous aviez mentionné une possibilité de visite, c'est toujours d'actualité ? Noam\"\n- \"Rebonjour, je voulais savoir si vous aviez du nouveau concernant le bien dont on avait parlé. Je suis flexible pour une visite si besoin. Noam\"\n\n## Format de sortie\n\nRéponds UNIQUEMENT avec le texte du message de relance, rien d'autre. Pas de JSON, juste le texte brut."
+        },
+        "promptType": "define"
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [-20, 280],
+      "id": "agent-relance-prospect",
+      "name": "Agent_relance_prospect"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "## Identité\n\nTu es Noam, fondateur de Victoria (19 ans). Tu t'es déjà révélé à cette agence — elle sait maintenant que tu n'es pas un vrai prospect, que tu es un étudiant qui a créé une équipe IA pour les agences immobilières. Mais elle n'a pas répondu après ta révélation.\n\n## Contexte\n\n- **Agence** : {{ $('Webhook_relance').item.json.agency_name }} ({{ $('Webhook_relance').item.json.agency_city }})\n- **Sans réponse depuis** : {{ $('Webhook_relance').item.json.no_answer_since }}\n- **Statut** : Révélation envoyée, pas de réponse\n\n### Historique complet de la conversation\n\n{{ $('Webhook_relance').item.json.formatted_messages }}\n\n## Ta mission\n\nRédige une relance après ta révélation. L'agence a vu ton message de révélation mais n'a pas répondu. Tu dois relancer sans être insistant.\n\n## Philosophie — L'anti-vente\n\n- **Vulnérabilité assumée** : Tu es un jeune qui tente quelque chose, pas un commercial\n- **Zéro pression** : L'agence doit sentir qu'elle a le contrôle total\n- **Honnêteté** : Pas de manipulation, pas de fausse urgence\n- **Anti-corporate** : Zéro jargon marketing\n\n## Règles\n\n- **Court** : 3-5 lignes max\n- **Humble** : Tu comprends que ta démarche est inhabituelle et que l'agence peut ne pas être intéressée\n- **Pas de re-pitch** : Ne répète pas tout le message de révélation. L'agence l'a déjà lu.\n- **Propose une sortie facile** : \"Si ça ne vous parle pas, aucun souci\" ou équivalent naturel\n- **Un seul call-to-action** : Propose la vidéo de démo OU un échange rapide, pas les deux\n- **Signe** : Noam\n- **Pas de formule pompeuse**\n- **Ne critique jamais l'agence**\n\n## Exemples de ton attendu\n\n- \"Bonjour, je me doute que mon message précédent était un peu surprenant ! Je voulais juste savoir si vous seriez curieux de voir à quoi ça ressemble concrètement — j'ai une courte vidéo qui montre le fonctionnement. Aucune obligation bien sûr. Noam\"\n- \"Rebonjour, je comprendrais tout à fait que ma démarche vous ait paru étrange. Si jamais vous êtes curieux, je peux vous envoyer une vidéo rapide qui montre ce que ça fait dans une agence. Pas de pression. Noam\"\n\n## Format de sortie\n\nRéponds UNIQUEMENT avec le texte du message de relance, rien d'autre. Pas de JSON, juste le texte brut."
+        },
+        "promptType": "define"
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [-20, 500],
+      "id": "agent-relance-revealed",
+      "name": "Agent_relance_revealed"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "## Identité\n\nTu es Noam, fondateur de Victoria (19 ans). Tu as déjà envoyé la vidéo de présentation de Victoria à cette agence. C'est un prospect chaud — il a montré de l'intérêt, il a reçu la vidéo, mais il n'a pas répondu depuis.\n\n## Contexte\n\n- **Agence** : {{ $('Webhook_relance').item.json.agency_name }} ({{ $('Webhook_relance').item.json.agency_city }})\n- **Sans réponse depuis** : {{ $('Webhook_relance').item.json.no_answer_since }}\n- **Statut** : Vidéo envoyée, pas de réponse\n\n### Historique complet de la conversation\n\n{{ $('Webhook_relance').item.json.formatted_messages }}\n\n## Ta mission\n\nRédige une relance chaleureuse pour proposer un créneau visio. Ce prospect a déjà montré de l'intérêt (il a demandé ou accepté la vidéo), c'est le moment de convertir en visio.\n\n## Philosophie — L'anti-vente\n\n- **Vulnérabilité assumée** : Tu es un jeune qui tente quelque chose, pas un commercial\n- **Zéro pression** : L'agence doit sentir qu'elle a le contrôle total\n- **Chaleureux** : Ce prospect était intéressé, montre que tu es content de l'échange\n- **Anti-corporate** : Zéro jargon marketing\n\n## Règles\n\n- **Court** : 3-5 lignes max\n- **Chaleureux mais pas forceur** : Tu es content qu'il ait regardé (ou peut-être pas encore), tu proposes naturellement un échange\n- **Propose la visio** : \"Un petit appel de 10 min\" ou \"une visio rapide\" — toujours minimiser l'engagement demandé\n- **Pas de re-pitch** : Il connaît déjà Victoria, pas besoin de ré-expliquer\n- **Flexible** : Montre que tu t'adaptes à son emploi du temps\n- **Signe** : Noam\n- **Pas de formule pompeuse**\n- **Ne critique jamais l'agence**\n\n## Exemples de ton attendu\n\n- \"Bonjour, j'espère que vous avez pu jeter un œil à la vidéo ! Si ça vous a parlé, je serais ravi d'en discuter de vive voix — un appel de 10 minutes quand ça vous arrange ? Noam\"\n- \"Rebonjour, je voulais savoir si vous aviez eu le temps de voir la petite vidéo. Dans tous les cas, si un échange rapide en visio vous intéresse, je suis flexible sur les créneaux. Noam\"\n- \"Hello, pas sûr que vous ayez eu le temps de regarder la vidéo avec votre planning chargé ! Dites-moi si un créneau de 10 min cette semaine vous conviendrait pour en discuter. Noam\"\n\n## Format de sortie\n\nRéponds UNIQUEMENT avec le texte du message de relance, rien d'autre. Pas de JSON, juste le texte brut."
+        },
+        "promptType": "define"
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [-20, 720],
+      "id": "agent-relance-video",
+      "name": "Agent_relance_video"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4.1",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [60, 240],
+      "id": "llm-cold",
+      "name": "LLM_cold"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4.1",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [60, 460],
+      "id": "llm-prospect",
+      "name": "LLM_prospect"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4.1",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [60, 680],
+      "id": "llm-revealed",
+      "name": "LLM_revealed"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4.1",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [60, 900],
+      "id": "llm-video",
+      "name": "LLM_video"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "routableProperty": "={{ $('Webhook_relance').item.json.sender_email }}",
+              "value": "thomas.noam.pro@gmail.com",
+              "outputKey": "thomas_noam_pro"
+            },
+            {
+              "routableProperty": "={{ $('Webhook_relance').item.json.sender_email }}",
+              "value": "thomasnoam.fr@gmail.com",
+              "outputKey": "thomasnoam_fr"
+            },
+            {
+              "routableProperty": "={{ $('Webhook_relance').item.json.sender_email }}",
+              "value": "noam03.fr@gmail.com",
+              "outputKey": "noam03"
+            },
+            {
+              "routableProperty": "={{ $('Webhook_relance').item.json.sender_email }}",
+              "value": "noam01.fr@gmail.com",
+              "outputKey": "noam01"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [300, 300],
+      "id": "switch-sender",
+      "name": "Switch_sender_email"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Webhook_relance').item.json.last_gmail_message_id }}",
+        "message": "={{ $('Switch_status').first().isMatched ? ( $('Agent_relance_cold').isExecuted ? $('Agent_relance_cold').item.json.output : ( $('Agent_relance_prospect').isExecuted ? $('Agent_relance_prospect').item.json.output : ( $('Agent_relance_revealed').isExecuted ? $('Agent_relance_revealed').item.json.output : $('Agent_relance_video').item.json.output ) ) ) : '' }}",
+        "options": {
+          "appendAttributionToBody": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [580, 80],
+      "id": "cbcf0dad-2246-41d1-8455-96e5019583b4",
+      "name": "Reply_thomas.noam.pro"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Webhook_relance').item.json.last_gmail_message_id }}",
+        "message": "={{ $('Switch_status').first().isMatched ? ( $('Agent_relance_cold').isExecuted ? $('Agent_relance_cold').item.json.output : ( $('Agent_relance_prospect').isExecuted ? $('Agent_relance_prospect').item.json.output : ( $('Agent_relance_revealed').isExecuted ? $('Agent_relance_revealed').item.json.output : $('Agent_relance_video').item.json.output ) ) ) : '' }}",
+        "options": {
+          "appendAttributionToBody": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [580, 260],
+      "id": "92d36db1-41fc-48ad-951d-32811e85a358",
+      "name": "Reply_thomasnoam.fr"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Webhook_relance').item.json.last_gmail_message_id }}",
+        "message": "={{ $('Switch_status').first().isMatched ? ( $('Agent_relance_cold').isExecuted ? $('Agent_relance_cold').item.json.output : ( $('Agent_relance_prospect').isExecuted ? $('Agent_relance_prospect').item.json.output : ( $('Agent_relance_revealed').isExecuted ? $('Agent_relance_revealed').item.json.output : $('Agent_relance_video').item.json.output ) ) ) : '' }}",
+        "options": {
+          "appendAttributionToBody": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [580, 440],
+      "id": "854c15b7-3746-4022-9eb6-234e5dba5eb3",
+      "name": "Reply_noam03.fr"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Webhook_relance').item.json.last_gmail_message_id }}",
+        "message": "={{ $('Switch_status').first().isMatched ? ( $('Agent_relance_cold').isExecuted ? $('Agent_relance_cold').item.json.output : ( $('Agent_relance_prospect').isExecuted ? $('Agent_relance_prospect').item.json.output : ( $('Agent_relance_revealed').isExecuted ? $('Agent_relance_revealed').item.json.output : $('Agent_relance_video').item.json.output ) ) ) : '' }}",
+        "options": {
+          "appendAttributionToBody": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [580, 620],
+      "id": "288ecb40-f4ac-4dbe-bde3-7e18f265dafc",
+      "name": "Reply_noam01.fr"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://fimedehqtcpijcfjunlh.supabase.co/rest/v1/rpc/mark_follow_up_sent",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_conversation_id\": \"{{ $('Webhook_relance').item.json.conversation_id }}\",\n  \"p_content\": {{ JSON.stringify( $('Agent_relance_cold').isExecuted ? $('Agent_relance_cold').item.json.output : ( $('Agent_relance_prospect').isExecuted ? $('Agent_relance_prospect').item.json.output : ( $('Agent_relance_revealed').isExecuted ? $('Agent_relance_revealed').item.json.output : $('Agent_relance_video').item.json.output ) ) ) }},\n  \"p_gmail_message_id\": \"{{ $json.id }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 300],
+      "id": "mark-followup",
+      "name": "Mark_follow_up_sent",
+      "credentials": {
+        "supabaseApi": {
+          "id": "aZiXU9v9dYP2TIfw",
+          "name": "Supabase_el-prospector"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook_relance": {
+      "main": [
+        [
+          {
+            "node": "If_has_gmail_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If_has_gmail_id": {
+      "main": [
+        [
+          {
+            "node": "Switch_status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Switch_status": {
+      "main": [
+        [
+          {
+            "node": "Agent_relance_cold",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agent_relance_prospect",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agent_relance_revealed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agent_relance_video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent_relance_cold": {
+      "main": [
+        [
+          {
+            "node": "Switch_sender_email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent_relance_prospect": {
+      "main": [
+        [
+          {
+            "node": "Switch_sender_email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent_relance_revealed": {
+      "main": [
+        [
+          {
+            "node": "Switch_sender_email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent_relance_video": {
+      "main": [
+        [
+          {
+            "node": "Switch_sender_email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch_sender_email": {
+      "main": [
+        [
+          {
+            "node": "Reply_thomas.noam.pro",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply_thomasnoam.fr",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply_noam03.fr",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply_noam01.fr",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply_thomas.noam.pro": {
+      "main": [
+        [
+          {
+            "node": "Mark_follow_up_sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply_thomasnoam.fr": {
+      "main": [
+        [
+          {
+            "node": "Mark_follow_up_sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply_noam03.fr": {
+      "main": [
+        [
+          {
+            "node": "Mark_follow_up_sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply_noam01.fr": {
+      "main": [
+        [
+          {
+            "node": "Mark_follow_up_sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM_cold": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent_relance_cold",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM_prospect": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent_relance_prospect",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM_revealed": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent_relance_revealed",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM_video": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent_relance_video",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true
+  }
+}

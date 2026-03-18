@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>El Prospector - Grille France</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; }
+    #map { height: 100vh; width: 100%; }
+    .controls {
+      position: absolute; top: 10px; right: 10px; z-index: 1000;
+      background: white; padding: 16px; border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2); max-width: 280px;
+    }
+    .controls h3 { margin-bottom: 10px; font-size: 14px; }
+    .layer-toggle { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 13px; cursor: pointer; }
+    .layer-toggle input { cursor: pointer; }
+    .legend { margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee; }
+    .legend-item { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 12px; }
+    .legend-color { width: 16px; height: 16px; border-radius: 3px; border: 1px solid #999; }
+    .stats { margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee; font-size: 12px; color: #666; }
+    .stats div { margin: 2px 0; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="controls">
+    <h3>El Prospector - Grille</h3>
+
+    <label class="layer-toggle">
+      <input type="checkbox" id="toggle-france" checked /> France 10km (vue ensemble)
+    </label>
+    <label class="layer-toggle">
+      <input type="checkbox" id="toggle-bordeaux" /> Bordeaux (1km)
+    </label>
+    <label class="layer-toggle">
+      <input type="checkbox" id="toggle-paris" /> Paris (1km)
+    </label>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-color" style="background: #e74c3c"></div> Dense (INSEE 1-2)</div>
+      <div class="legend-item"><div class="legend-color" style="background: #f39c12"></div> Intermediaire (INSEE 3-4)</div>
+      <div class="legend-item"><div class="legend-color" style="background: #3498db"></div> Rural (INSEE 5-7)</div>
+      <div class="legend-item"><div class="legend-color" style="background: #2ecc71"></div> Scanne (done)</div>
+    </div>
+
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <script>
+    const map = L.map('map').setView([46.5, 2.5], 6);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 18,
+    }).addTo(map);
+
+    const colors = {
+      dense: '#e74c3c',
+      intermediate: '#f39c12',
+      rural: '#3498db',
+      done: '#2ecc71',
+    };
+
+    function getStyle(feature) {
+      const density = feature.properties.density;
+      const status = feature.properties.status || 'pending';
+      return {
+        color: status === 'done' ? colors.done : colors[density] || '#999',
+        weight: 0.5,
+        fillOpacity: status === 'done' ? 0.4 : 0.2,
+        fillColor: status === 'done' ? colors.done : colors[density] || '#999',
+      };
+    }
+
+    function onEachFeature(feature, layer) {
+      const p = feature.properties;
+      layer.bindPopup(
+        `<b>${p.density}</b><br>` +
+        `Priorite: ${p.priority}<br>` +
+        `Status: ${p.status || 'pending'}`
+      );
+    }
+
+    async function loadGeoJSON(url) {
+      try {
+        const res = await fetch(url);
+        return await res.json();
+      } catch (e) {
+        console.warn('Fichier non trouve:', url);
+        return null;
+      }
+    }
+
+    async function init() {
+      const [france, bordeaux, paris] = await Promise.all([
+        loadGeoJSON('./grid-france-10km.geojson'),
+        loadGeoJSON('./grid-bordeaux.geojson'),
+        loadGeoJSON('./grid-paris.geojson'),
+      ]);
+
+      const layers = {};
+
+      if (france) {
+        layers.france = L.geoJSON(france, { style: getStyle, onEachFeature }).addTo(map);
+      }
+      if (bordeaux) {
+        layers.bordeaux = L.geoJSON(bordeaux, { style: getStyle, onEachFeature });
+      }
+      if (paris) {
+        layers.paris = L.geoJSON(paris, { style: getStyle, onEachFeature });
+      }
+
+      // Toggle layers
+      document.getElementById('toggle-france').addEventListener('change', (e) => {
+        e.target.checked ? layers.france?.addTo(map) : layers.france?.remove();
+      });
+      document.getElementById('toggle-bordeaux').addEventListener('change', (e) => {
+        if (e.target.checked) {
+          layers.bordeaux?.addTo(map);
+          map.setView([44.837, -0.579], 12);
+        } else {
+          layers.bordeaux?.remove();
+        }
+      });
+      document.getElementById('toggle-paris').addEventListener('change', (e) => {
+        if (e.target.checked) {
+          layers.paris?.addTo(map);
+          map.setView([48.856, 2.352], 12);
+        } else {
+          layers.paris?.remove();
+        }
+      });
+
+      // Stats
+      const totalFrance = france?.features?.length || 0;
+      const totalBdx = bordeaux?.features?.length || 0;
+      const totalParis = paris?.features?.length || 0;
+      document.getElementById('stats').innerHTML = `
+        <div>France 10km: ${totalFrance} cases</div>
+        <div>Bordeaux detail: ${totalBdx} zones</div>
+        <div>Paris detail: ${totalParis} zones</div>
+        <div>Total scan_zones: 30 243</div>
+      `;
+    }
+
+    init();
+  </script>
+</body>
+</html>
