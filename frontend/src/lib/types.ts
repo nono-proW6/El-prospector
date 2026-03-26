@@ -18,7 +18,16 @@ export interface Agency {
   score_reason: string | null
   sales_brief: string | null
   rating: number | null
+  listing_title: string | null
+  listing_price: string | null
+  listing_url: string | null
+  listing_ref: string | null
+  listing_type: string | null
   created_at: string
+  call_result: string | null
+  call_date: string | null
+  callback_date: string | null
+  call_notes: string | null
 }
 
 export interface Conversation {

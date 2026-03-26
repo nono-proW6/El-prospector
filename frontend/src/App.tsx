@@ -1,11 +1,13 @@
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
-import { Building2, BarChart3, Map, PhoneCall, MailQuestion, Activity } from 'lucide-react'
+import { Building2, BarChart3, Map, PhoneCall, MailQuestion, Activity, ClipboardList, Headset } from 'lucide-react'
 import Agencies from './pages/Agencies'
 import Dashboard from './pages/Dashboard'
 import ScanMap from './pages/ScanMap'
 import Enrichment from './pages/Enrichment'
 import UnmatchedEmails from './pages/UnmatchedEmails'
 import Monitoring from './pages/Monitoring'
+import ListingEnrich from './pages/ListingEnrich'
+import ColdCall from './pages/ColdCall'
 
 function App() {
   return (
@@ -16,7 +18,9 @@ function App() {
           <NavItem to="/" icon={<BarChart3 size={18} />} label="Dashboard" />
           <NavItem to="/agencies" icon={<Building2 size={18} />} label="Agences" />
           <NavItem to="/scan-map" icon={<Map size={18} />} label="Carte scan" />
+          <NavItem to="/cold-call" icon={<Headset size={18} />} label="Cold Call" />
           <NavItem to="/enrichment" icon={<PhoneCall size={18} />} label="Contacts manuels" />
+          <NavItem to="/listing-enrich" icon={<ClipboardList size={18} />} label="Annonces" />
           <NavItem to="/unmatched" icon={<MailQuestion size={18} />} label="Non-matches" />
           <NavItem to="/monitoring" icon={<Activity size={18} />} label="Monitoring" />
         </nav>
@@ -25,7 +29,9 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/agencies" element={<Agencies />} />
             <Route path="/scan-map" element={<ScanMap />} />
+            <Route path="/cold-call" element={<ColdCall />} />
             <Route path="/enrichment" element={<Enrichment />} />
+            <Route path="/listing-enrich" element={<ListingEnrich />} />
             <Route path="/unmatched" element={<UnmatchedEmails />} />
             <Route path="/monitoring" element={<Monitoring />} />
           </Routes>

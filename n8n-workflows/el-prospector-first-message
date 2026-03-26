@@ -1,0 +1,671 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "amount": "={{ Math.floor(Math.random() * 41) + 15 }}"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        736,
+        320
+      ],
+      "id": "de0de98b-712b-407d-96ab-6302cc5208ac",
+      "name": "Wait3",
+      "webhookId": "b506b79c-07fa-4b8f-b449-4968ba1a2f43"
+    },
+    {
+      "parameters": {
+        "amount": "={{ Math.floor(Math.random() * 16) }}",
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -352,
+        304
+      ],
+      "id": "49a20da2-54eb-4645-b907-3eb8c8f7143e",
+      "name": "Wait4",
+      "webhookId": "b506b79c-07fa-4b8f-b449-4968ba1a2f43"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                0
+              ],
+              "triggerAtHour": 18,
+              "triggerAtMinute": 11
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -672,
+        144
+      ],
+      "id": "399cd32f-5e57-4413-81c3-87e6e4ba7acd",
+      "name": "Schedule_trigger",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "triggerAtHour": 10,
+              "triggerAtMinute": 11
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -672,
+        304
+      ],
+      "id": "f270ebad-fad8-4dbd-bced-4fd787c5642b",
+      "name": "Schedule_trigger1",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://fimedehqtcpijcfjunlh.supabase.co/rest/v1/rpc/get_pending_conversations",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -80,
+        304
+      ],
+      "id": "be40770f-2174-4d38-9c54-9f54ba7275a0",
+      "name": "get_info_agence_for_message_redaction",
+      "credentials": {
+        "supabaseApi": {
+          "id": "aZiXU9v9dYP2TIfw",
+          "name": "Supabase_el-prospector"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        464,
+        304
+      ],
+      "id": "d5d561ab-b26c-43ee-8547-fe76192558d0",
+      "name": "Loop_over_items"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "00332d99-5028-41fb-a3be-bef655e5b912-envoie-email-manuel",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -352,
+        0
+      ],
+      "id": "35e8f8bb-f7fd-4da1-a88c-76a669b10a92",
+      "name": "Webhook",
+      "webhookId": "00332d99-5028-41fb-a3be-bef655e5b912"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://fimedehqtcpijcfjunlh.supabase.co/rest/v1/rpc/mark_conversation_sent",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_conversation_id\": \"{{$('Loop_over_items').item.json.conversation_id}}\",\n  \"p_email_content\": {{ JSON.stringify($('Prepare_message').item.json.email_body) }},\n  \"p_sender_email\": \"{{ $('Loop_over_items').item.json.sender_email }}\",\n  \"p_gmail_message_id\": \"{{ $json.id }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1936,
+        512
+      ],
+      "id": "b392145c-cdc4-41ff-bfdc-3d6f7838ff33",
+      "name": "Mark_conversation_sent",
+      "credentials": {
+        "supabaseApi": {
+          "id": "aZiXU9v9dYP2TIfw",
+          "name": "Supabase_el-prospector"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "triggerAtHour": 7,
+              "triggerAtMinute": 40
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -672,
+        480
+      ],
+      "id": "2a43c441-15d8-4425-8a37-1b3b1357f1c2",
+      "name": "Schedule_trigger2",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const variantes = [\n  \"Bonjour, vous êtes bien situé à {ville} ? Je commence à chercher dans le secteur.\",\n  \"Bonjour, je vais être muté sur {ville} prochainement, vous couvrez bien ce secteur ?\",\n  \"Bonjour, je prépare un déménagement sur {ville}, vous êtes bien implanté dans le coin ?\",\n  \"Bonjour, je vais m'installer sur {ville} dans les prochains mois, c'est bien votre secteur ?\",\n  \"Bonjour, on m'a conseillé votre agence pour une recherche sur {ville}, vous êtes bien basé là-bas ?\",\n  \"Bonjour, je commence à regarder pour m'installer sur {ville}, vous travaillez bien sur ce secteur ?\"\n];\n\nconst sujets = [\n  \"Recherche sur {ville}\",\n  \"Recherche immobilière - {ville}\",\n  \"Question sur votre secteur\",\n  \"Installation sur {ville}\",\n  \"Demande d'info - {ville}\",\n  \"Votre agence couvre {ville} ?\"\n];\n\nconst city = ($json.agency_city || 'votre secteur').replace(/\\s*\\(.*\\)/, '').trim();\nconst variante = variantes[Math.floor(Math.random() * variantes.length)];\nconst sujet = sujets[Math.floor(Math.random() * sujets.length)];\n\nreturn {\n  ...$json,\n  email_subject: sujet.replace('{ville}', city),\n  email_body: variante.replace('{ville}', city) + '\\n\\nNoam'\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        240
+      ],
+      "id": "1b1be718-4914-430a-9579-bd16d0f74e8a",
+      "name": "Prepare_message"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "17ac03c3-b310-4a44-aadf-3d8f9deb203c",
+                    "leftValue": "={{ $json.sender_email }}",
+                    "rightValue": "thomasnoam.fr@gmail.com",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "thomasnoam.fr@gmail.com"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "6ac81fbb-f527-4c4b-8a87-f9894cbb283e",
+                    "leftValue": "={{ $json.sender_email }}",
+                    "rightValue": "thomas.noam.pro@gmail.com",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "thomas.noam.pro@gmail.com"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "37a86d31-3855-4c29-9a96-f0fcf6cec64b",
+                    "leftValue": "={{ $json.sender_email }}",
+                    "rightValue": "noam03.fr@gmail.com",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "noam03.fr@gmail.com"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "348f6e0a-087c-4e90-8165-8513a448e116",
+                    "leftValue": "={{ $json.sender_email }}",
+                    "rightValue": "noam01.fr@gmail.com",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "noam01.fr@gmail.com"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1120,
+        208
+      ],
+      "id": "81a44f5a-408d-40b3-a958-837d3a60547e",
+      "name": "Switch_sender_email"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Loop_over_items').item.json.agency_email }}",
+        "subject": "={{ $('Prepare_message').item.json.email_subject }}",
+        "emailType": "text",
+        "message": "={{ $('Prepare_message').item.json.email_body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1408,
+        -32
+      ],
+      "id": "1afb87f7-e3f0-4eaa-8a01-8f964782e3de",
+      "name": "Send_a_message_thomasnoam.fr@gmail.com",
+      "webhookId": "a50bfbcb-30a4-4798-90f9-9c67b1aed8f9",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "PXLXHpOy2A75t1Z4",
+          "name": "Gmail-account-perso2-thomasnoam.fr@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Loop_over_items').item.json.agency_email }}",
+        "subject": "={{ $('Prepare_message').item.json.email_subject }}",
+        "emailType": "text",
+        "message": "={{ $('Prepare_message').item.json.email_body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1408,
+        160
+      ],
+      "id": "c0905658-9d36-4eb2-aafd-e43745e40a68",
+      "name": "Send_a_message_thomas.noam.pro@gmail.com",
+      "webhookId": "a50bfbcb-30a4-4798-90f9-9c67b1aed8f9",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "mPXHaC823VX40JhX",
+          "name": "Gmail-account-perso-thomas.noam.pro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Loop_over_items').item.json.agency_email }}",
+        "subject": "={{ $('Prepare_message').item.json.email_subject }}",
+        "emailType": "text",
+        "message": "={{ $('Prepare_message').item.json.email_body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1408,
+        336
+      ],
+      "id": "ad4827b6-16ad-4bab-b6f3-42fdb44af626",
+      "name": "Send_a_message_noam03.fr@gmail.com",
+      "webhookId": "a50bfbcb-30a4-4798-90f9-9c67b1aed8f9",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "NIiuV0drEIPyfWYJ",
+          "name": "Gmail-account-inbox-noam03.fr@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Loop_over_items').item.json.agency_email }}",
+        "subject": "={{ $('Prepare_message').item.json.email_subject }}",
+        "emailType": "text",
+        "message": "={{ $('Prepare_message').item.json.email_body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1408,
+        512
+      ],
+      "id": "f65657a7-9ab0-472d-8ccd-d50b827bb940",
+      "name": "Send_a_message_noam01.fr@gmail.com",
+      "webhookId": "a50bfbcb-30a4-4798-90f9-9c67b1aed8f9",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Vb6Lxe36CTdLu9j7",
+          "name": "Gmail-account-noam01.fr@gmail.com"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Wait3": {
+      "main": [
+        [
+          {
+            "node": "Prepare_message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait4": {
+      "main": [
+        [
+          {
+            "node": "get_info_agence_for_message_redaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule_trigger": {
+      "main": [
+        [
+          {
+            "node": "Wait4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule_trigger1": {
+      "main": [
+        [
+          {
+            "node": "Wait4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_info_agence_for_message_redaction": {
+      "main": [
+        [
+          {
+            "node": "Loop_over_items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop_over_items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Wait3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "get_info_agence_for_message_redaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark_conversation_sent": {
+      "main": [
+        [
+          {
+            "node": "Loop_over_items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule_trigger2": {
+      "main": [
+        [
+          {
+            "node": "Wait4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare_message": {
+      "main": [
+        [
+          {
+            "node": "Switch_sender_email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch_sender_email": {
+      "main": [
+        [
+          {
+            "node": "Send_a_message_thomasnoam.fr@gmail.com",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send_a_message_thomas.noam.pro@gmail.com",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send_a_message_noam03.fr@gmail.com",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send_a_message_noam01.fr@gmail.com",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send_a_message_thomasnoam.fr@gmail.com": {
+      "main": [
+        [
+          {
+            "node": "Mark_conversation_sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send_a_message_thomas.noam.pro@gmail.com": {
+      "main": [
+        [
+          {
+            "node": "Mark_conversation_sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send_a_message_noam03.fr@gmail.com": {
+      "main": [
+        [
+          {
+            "node": "Mark_conversation_sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send_a_message_noam01.fr@gmail.com": {
+      "main": [
+        [
+          {
+            "node": "Mark_conversation_sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Schedule_trigger": [
+      {
+        "timestamp": "2026-03-05T21:36:00.012+01:00",
+        "Readable date": "March 5th 2026, 9:36:00 pm",
+        "Readable time": "9:36:00 pm",
+        "Day of week": "Thursday",
+        "Year": "2026",
+        "Month": "March",
+        "Day of month": "05",
+        "Hour": "21",
+        "Minute": "36",
+        "Second": "00",
+        "Timezone": "Europe/Berlin (UTC+01:00)"
+      }
+    ],
+    "Webhook": [
+      {
+        "headers": {
+          "host": "n8n.srv915893.hstgr.cloud",
+          "user-agent": "Deno/2.1.4 (variant; SupabaseEdgeRuntime/1.71.1)",
+          "content-length": "2",
+          "accept": "*/*",
+          "accept-encoding": "gzip,br",
+          "accept-language": "*",
+          "content-type": "application/json",
+          "traceparent": "00-d28167167c898f0d37ba746c89b5baf8-cfe870578674e76e-01",
+          "x-forwarded-for": "172.18.0.1",
+          "x-forwarded-host": "n8n.srv915893.hstgr.cloud",
+          "x-forwarded-port": "443",
+          "x-forwarded-proto": "https",
+          "x-forwarded-server": "7dab921d4622",
+          "x-real-ip": "172.18.0.1"
+        },
+        "params": {},
+        "query": {},
+        "body": {},
+        "webhookUrl": "https://n8n.srv915893.hstgr.cloud/webhook/00332d99-5028-41fb-a3be-bef655e5b912-envoie-email-manuel",
+        "executionMode": "production"
+      }
+    ]
+  },
+  "meta": {
+    "instanceId": "4a4a3572c025b273e3c53d1044b186e42ed8b92543e9bbb4da32d17e17c73c88"
+  }
+}

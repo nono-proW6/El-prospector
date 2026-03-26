@@ -12,6 +12,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
   sent: { label: 'Envoyé', color: 'text-sky-400', bg: 'bg-sky-500/20' },
   prospect_phase: { label: 'Prospect', color: 'text-blue-400', bg: 'bg-blue-500/20' },
   revealed: { label: 'Révélé', color: 'text-purple-400', bg: 'bg-purple-500/20' },
+  report_sent: { label: 'Rapport envoyé', color: 'text-violet-400', bg: 'bg-violet-500/20' },
   video_sent: { label: 'Vidéo envoyée', color: 'text-indigo-400', bg: 'bg-indigo-500/20' },
   visio_accepted: { label: 'Visio OK', color: 'text-green-400', bg: 'bg-green-500/20' },
   no_answer: { label: 'Pas de réponse', color: 'text-yellow-400', bg: 'bg-yellow-500/20' },
@@ -326,6 +327,28 @@ export default function Agencies() {
                 )}
               </div>
             )}
+
+            {/* Annonce trouvée */}
+            <div className="mt-4 p-3 bg-[var(--bg)] rounded-lg border border-[var(--border)]">
+              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide mb-2">Annonce prospect</p>
+              {selected.listing_title && selected.listing_title !== 'SKIP' ? (
+                <div className="space-y-1.5">
+                  <p className="text-sm font-medium">{selected.listing_title}</p>
+                  <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
+                    {selected.listing_price && <span className="text-emerald-400 font-semibold">{selected.listing_price}</span>}
+                    {selected.listing_type && <span className="capitalize">{selected.listing_type}</span>}
+                    {selected.listing_ref && <span>Réf: {selected.listing_ref}</span>}
+                  </div>
+                  {selected.listing_url && (
+                    <a href={selected.listing_url} target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--accent)] hover:underline flex items-center gap-1 mt-1">
+                      Voir l'annonce <ExternalLink size={10} />
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-[var(--text-muted)] italic">Aucune annonce trouvée</p>
+              )}
+            </div>
           </div>
 
           {/* Conversation */}

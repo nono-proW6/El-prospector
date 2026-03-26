@@ -74,6 +74,7 @@ const PIPELINE_STATUSES = [
   { key: 'sent', label: 'Envoyees', color: 'bg-sky-500' },
   { key: 'prospect_phase', label: 'Prospect', color: 'bg-blue-500' },
   { key: 'revealed', label: 'Revelees', color: 'bg-purple-500' },
+  { key: 'report_sent', label: 'Rapport', color: 'bg-violet-500' },
   { key: 'video_sent', label: 'Video', color: 'bg-indigo-500' },
   { key: 'visio_accepted', label: 'Visio OK', color: 'bg-green-500' },
   { key: 'no_answer', label: 'Pas de reponse', color: 'bg-yellow-500' },
@@ -201,11 +202,12 @@ export default function Dashboard() {
 
   // Phase performance from events
   // Ordered pipeline phases
-  const PHASE_ORDER = ['sent', 'prospect_phase', 'revealed', 'video_sent', 'visio_accepted']
+  const PHASE_ORDER = ['sent', 'prospect_phase', 'revealed', 'report_sent', 'video_sent', 'visio_accepted']
   const PHASE_LABELS: Record<string, string> = {
     sent: 'Envoyee',
     prospect_phase: 'Prospect',
     revealed: 'Revelee',
+    report_sent: 'Rapport envoye',
     video_sent: 'Video envoyee',
     visio_accepted: 'Visio acceptee',
   }
@@ -286,7 +288,7 @@ export default function Dashboard() {
 
   // Eligible for follow-up (delay passed + not at max)
   const now = Date.now()
-  const ELIGIBLE_STATUSES = ['sent', 'prospect_phase', 'revealed', 'video_sent']
+  const ELIGIBLE_STATUSES = ['sent', 'prospect_phase', 'revealed', 'report_sent', 'video_sent']
   const eligibleForFollowUp = conversations.filter(c => {
     if (!ELIGIBLE_STATUSES.includes(c.status)) return false
     const cfg = fuConfigMap.get(c.status)

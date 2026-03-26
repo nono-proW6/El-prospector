@@ -34,6 +34,7 @@ const ALL_STATUSES = [
   { value: 'sent', label: 'Email envoye', cls: 'bg-sky-500/20 text-sky-400' },
   { value: 'prospect_phase', label: 'Phase prospect', cls: 'bg-blue-500/20 text-blue-400' },
   { value: 'revealed', label: 'Revele', cls: 'bg-purple-500/20 text-purple-400' },
+  { value: 'report_sent', label: 'Rapport envoye', cls: 'bg-violet-500/20 text-violet-400' },
   { value: 'video_sent', label: 'Video envoyee', cls: 'bg-indigo-500/20 text-indigo-400' },
   { value: 'visio_accepted', label: 'Visio acceptee', cls: 'bg-green-500/20 text-green-400' },
   { value: 'no_answer', label: 'Pas de reponse', cls: 'bg-yellow-500/20 text-yellow-400' },
@@ -43,7 +44,7 @@ const ALL_STATUSES = [
 ] as const
 
 // Statuses that require an email (prospect is in the email pipeline)
-const EMAIL_REQUIRED_STATUSES = ['pending', 'sent', 'prospect_phase', 'revealed', 'video_sent', 'visio_accepted', 'closed']
+const EMAIL_REQUIRED_STATUSES = ['pending', 'sent', 'prospect_phase', 'revealed', 'report_sent', 'video_sent', 'visio_accepted', 'closed']
 
 const STATUS_MAP = Object.fromEntries(ALL_STATUSES.map(s => [s.value, s]))
 

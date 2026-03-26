@@ -30,6 +30,7 @@ const PIPELINE_COLORS: Record<string, { color: string; label: string }> = {
   sent:          { color: '#38bdf8', label: 'Envoyées' },
   prospect_phase:{ color: '#f59e0b', label: 'Prospect phase' },
   revealed:      { color: '#a855f7', label: 'Révélées' },
+  report_sent:   { color: '#7c3aed', label: 'Rapport envoyé' },
   video_sent:    { color: '#6366f1', label: 'Vidéo envoyée' },
   visio_accepted:{ color: '#34d399', label: 'Visio OK' },
   no_answer:     { color: '#eab308', label: 'Pas de réponse' },
@@ -101,6 +102,11 @@ type Agency = {
   is_franchise: boolean
   rating: number | null
   source: string | null
+  listing_title: string | null
+  listing_price: string | null
+  listing_url: string | null
+  listing_ref: string | null
+  listing_type: string | null
 }
 
 type Stats = {
@@ -556,7 +562,7 @@ export default function ScanMap() {
     while (hasMore) {
       const { data, error } = await supabase
         .from('agencies')
-        .select('id, name, city, phone, website, email, owner_name, linkedin, siret, score, score_reason, sales_brief, lat, lng, enrichment_status, enrichment_note, pages_scraped, scrape_log, is_franchise, rating, source')
+        .select('id, name, city, phone, website, email, owner_name, linkedin, siret, score, score_reason, sales_brief, lat, lng, enrichment_status, enrichment_note, pages_scraped, scrape_log, is_franchise, rating, source, listing_title, listing_price, listing_url, listing_ref, listing_type')
         .range(from, from + PAGE_SIZE - 1)
       if (error || !data) break
       allAgencies = allAgencies.concat(data as Agency[])
@@ -1233,6 +1239,11 @@ export default function ScanMap() {
               </div>
               <span className="text-[var(--border)]">→</span>
               <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-violet-400" />
+                <span>Rapport envoyé ({convStats.report_sent ?? 0})</span>
+              </div>
+              <span className="text-[var(--border)]">→</span>
+              <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-indigo-400" />
                 <span>Vidéo envoyée ({convStats.video_sent ?? 0})</span>
               </div>
@@ -1263,6 +1274,7 @@ export default function ScanMap() {
                   { status: 'sent', label: 'Email envoye', color: 'bg-sky-400', desc: 'Relance du 1er email froid' },
                   { status: 'prospect_phase', label: 'Prospect phase', color: 'bg-amber-400', desc: 'Relance contextuelle sur la discussion' },
                   { status: 'revealed', label: 'Revelee', color: 'bg-purple-400', desc: 'Relance post-revelation, ton humble' },
+                  { status: 'report_sent', label: 'Rapport envoye', color: 'bg-violet-400', desc: 'Relance post-rapport, propose la video' },
                   { status: 'video_sent', label: 'Video envoyee', color: 'bg-indigo-400', desc: 'Relance pour proposer une visio' },
                 ].map((item) => {
                   const cfg = followUpConfig.find((c) => c.status === item.status)
@@ -1419,6 +1431,28 @@ export default function ScanMap() {
                   )}
                 </div>
               )}
+
+              {/* Annonce trouvée */}
+              <div className="mt-3 p-3 bg-[var(--surface)] rounded-lg border border-[var(--border)]">
+                <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide mb-2">Annonce prospect</p>
+                {selectedAgency.listing_title && selectedAgency.listing_title !== 'SKIP' ? (
+                  <div className="space-y-1.5">
+                    <p className="text-sm font-medium">{selectedAgency.listing_title}</p>
+                    <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
+                      {selectedAgency.listing_price && <span className="text-emerald-400 font-semibold">{selectedAgency.listing_price}</span>}
+                      {selectedAgency.listing_type && <span className="capitalize">{selectedAgency.listing_type}</span>}
+                      {selectedAgency.listing_ref && <span>Réf: {selectedAgency.listing_ref}</span>}
+                    </div>
+                    {selectedAgency.listing_url && (
+                      <a href={selectedAgency.listing_url} target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--accent)] hover:underline flex items-center gap-1 mt-1">
+                        Voir l'annonce <ExternalLink size={10} />
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-[var(--text-muted)] italic">Aucune annonce trouvée</p>
+                )}
+              </div>
 
               {/* Enrichment note */}
               {selectedAgency.enrichment_note && (
