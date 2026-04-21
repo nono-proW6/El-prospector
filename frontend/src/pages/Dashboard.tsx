@@ -741,7 +741,6 @@ export default function Dashboard() {
                 {ELIGIBLE_STATUSES.map(status => {
                   const count = eligibleForFollowUp.filter(c => c.status === status).length
                   if (count === 0) return null
-                  const cfg = fuConfigMap.get(status)
                   const label = PIPELINE_STATUSES.find(p => p.key === status)?.label || status
                   return (
                     <div key={status} className="flex items-center justify-between">

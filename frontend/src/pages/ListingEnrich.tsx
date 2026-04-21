@@ -39,7 +39,7 @@ export default function ListingEnrich() {
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
   const [savedCount, setSavedCount] = useState(0)
-  const [skippedCount, setSkippedCount] = useState(0)
+  const [, setSkippedCount] = useState(0)
 
   useEffect(() => {
     loadAgencies()

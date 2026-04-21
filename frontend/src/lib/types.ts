@@ -28,6 +28,12 @@ export interface Agency {
   call_date: string | null
   callback_date: string | null
   call_notes: string | null
+  linkedin_status: string | null
+  linkedin_connect_date: string | null
+  call_skipped_at: string | null
+  linkedin_skipped_at: string | null
+  department: string | null
+  region: string | null
 }
 
 export interface Conversation {

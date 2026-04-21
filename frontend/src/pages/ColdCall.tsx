@@ -6,8 +6,16 @@ import {
   CalendarClock, Trophy, Flame, Target, Loader2,
   ThumbsDown, PhoneMissed, PhoneOff, SkipForward,
   RotateCcw, ChevronDown, ChevronRight, Clock,
-  TrendingUp, PhoneCall
+  TrendingUp, CheckCircle2, Send, Linkedin, XCircle
 } from 'lucide-react'
+
+function formatDateTime(iso: string | null): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+    + ' à '
+    + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+}
 
 type CallResult = 'rdv' | 'rappeler' | 'pas_décroché' | 'pas_intéressé' | 'mauvais_numéro'
 
@@ -45,8 +53,13 @@ export default function ColdCall() {
   const [callNotes, setCallNotes] = useState('')
   const [transitioning, setTransitioning] = useState(false)
 
-  const poolRef = useRef<string[]>([])
+  // Tiered pools: accepted LinkedIn (hottest) → sent request → rest → skipped (last chance)
+  const acceptedPoolRef = useRef<string[]>([])
+  const sentPoolRef = useRef<string[]>([])
+  const restPoolRef = useRef<string[]>([])
+  const skippedPoolRef = useRef<string[]>([])
   const usedRef = useRef<Set<string>>(new Set())
+  const [currentTier, setCurrentTier] = useState<'accepted' | 'sent' | 'rest' | 'skipped' | null>(null)
 
   const [todayCalls, setTodayCalls] = useState(0)
   const [todayDecroches, setTodayDecroches] = useState(0)
@@ -56,6 +69,9 @@ export default function ColdCall() {
   const [showCalled, setShowCalled] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [availableCount, setAvailableCount] = useState(0)
+  const [acceptedCount, setAcceptedCount] = useState(0)
+  const [sentCount, setSentCount] = useState(0)
+  const [skippedCount, setSkippedCount] = useState(0)
 
   const motRef = useRef(MOTIVATIONS[0])
 
@@ -74,10 +90,20 @@ export default function ColdCall() {
   }, [])
 
   async function loadAvailable() {
-    const { count } = await supabase.from('agencies').select('id', { count: 'exact', head: true })
+    const base = () => supabase.from('agencies').select('id', { count: 'exact', head: true })
       .eq('enrichment_status', 'done').eq('is_franchise', false)
       .not('phone', 'is', null).gte('score', 4).is('call_result', null)
-    setAvailableCount(count || 0)
+
+    const [total, accepted, sent, skipped] = await Promise.all([
+      base(),
+      base().eq('linkedin_status', 'accepted').is('call_skipped_at', null),
+      base().eq('linkedin_status', 'sent').is('call_skipped_at', null),
+      base().not('call_skipped_at', 'is', null),
+    ])
+    setAvailableCount(total.count || 0)
+    setAcceptedCount(accepted.count || 0)
+    setSentCount(sent.count || 0)
+    setSkippedCount(skipped.count || 0)
   }
 
   async function loadCalled() {
@@ -87,30 +113,56 @@ export default function ColdCall() {
   }
 
   // ─── Session logic ────────────────────────────────────
-  async function fetchNext(): Promise<Agency | null> {
-    while (poolRef.current.length > 0) {
-      const id = poolRef.current.shift()!
+  async function drainPool(pool: React.MutableRefObject<string[]>, tier: 'accepted' | 'sent' | 'rest' | 'skipped'): Promise<Agency | null> {
+    while (pool.current.length > 0) {
+      const id = pool.current.shift()!
       if (usedRef.current.has(id)) continue
       const { data } = await supabase.from('agencies').select('*').eq('id', id).single()
-      if (data && !data.call_result) { usedRef.current.add(id); return data as Agency }
+      if (data && !data.call_result) {
+        usedRef.current.add(id)
+        setCurrentTier(tier)
+        return data as Agency
+      }
     }
-    const { data } = await supabase.from('agencies').select('id')
+    return null
+  }
+
+  async function fetchNext(): Promise<Agency | null> {
+    // Priority: accepted → sent → rest → skipped (last resort)
+    return (await drainPool(acceptedPoolRef, 'accepted'))
+      || (await drainPool(sentPoolRef, 'sent'))
+      || (await drainPool(restPoolRef, 'rest'))
+      || (await drainPool(skippedPoolRef, 'skipped'))
+  }
+
+  async function buildPools() {
+    const base = () => supabase.from('agencies').select('id, score')
       .eq('enrichment_status', 'done').eq('is_franchise', false)
       .not('phone', 'is', null).gte('score', 4).is('call_result', null)
-      .order('score', { ascending: false }).limit(50)
-    if (!data?.length) return null
-    const fresh = data.filter(d => !usedRef.current.has(d.id))
-    if (!fresh.length) return null
-    poolRef.current = fresh.slice(1).map(d => d.id)
-    usedRef.current.add(fresh[0].id)
-    const { data: a } = await supabase.from('agencies').select('*').eq('id', fresh[0].id).single()
-    return a as Agency
+
+    // Unskipped pools — ordered by score DESC
+    const unskipped = () => base().is('call_skipped_at', null).order('score', { ascending: false, nullsFirst: false })
+    // Skipped pool — oldest skip first (second-chance logic)
+    const skipped = () => base().not('call_skipped_at', 'is', null).order('call_skipped_at', { ascending: true })
+
+    const [accepted, sent, rest, skippedData] = await Promise.all([
+      unskipped().eq('linkedin_status', 'accepted').limit(100),
+      unskipped().eq('linkedin_status', 'sent').limit(100),
+      unskipped().is('linkedin_status', null).limit(200),
+      skipped().limit(200),
+    ])
+    acceptedPoolRef.current = (accepted.data || []).map(d => d.id)
+    sentPoolRef.current = (sent.data || []).map(d => d.id)
+    restPoolRef.current = (rest.data || []).map(d => d.id)
+    skippedPoolRef.current = (skippedData.data || []).map(d => d.id)
   }
 
   async function startSession() {
     setLoading(true)
-    poolRef.current = []; usedRef.current = new Set()
+    acceptedPoolRef.current = []; sentPoolRef.current = []; restPoolRef.current = []; skippedPoolRef.current = []
+    usedRef.current = new Set()
     setCompleted(0); setStreak(0)
+    await buildPools()
     const a = await fetchNext()
     if (a) { setCurrentAgency(a); setInSession(true) }
     setLoading(false)
@@ -123,6 +175,7 @@ export default function ColdCall() {
       call_result: result, call_date: new Date().toISOString(),
       call_notes: callNotes || null,
       callback_date: result === 'rappeler' && callbackDate ? callbackDate : null,
+      call_skipped_at: null,
     }).eq('id', currentAgency.id)
     setTodayCalls(c => c + 1)
     if (result !== 'pas_décroché' && result !== 'mauvais_numéro') setTodayDecroches(d => d + 1)
@@ -133,7 +186,14 @@ export default function ColdCall() {
     advance()
   }
 
-  function skip() { advance() }
+  async function skip() {
+    if (currentAgency) {
+      await supabase.from('agencies').update({
+        call_skipped_at: new Date().toISOString(),
+      }).eq('id', currentAgency.id)
+    }
+    advance()
+  }
 
   async function advance() {
     setCallNotes(''); setCallbackDate(''); setShowCallbackPicker(false)
@@ -198,6 +258,36 @@ export default function ColdCall() {
             style={{ width: `${(completed / sessionSize) * 100}%` }} />
         </div>
 
+        {/* LinkedIn status block (always shown if linkedin info exists) */}
+        {(a.linkedin_status || a.linkedin) && (
+          <div className={`flex items-center justify-between gap-3 mb-4 px-3 py-2 rounded-lg border text-xs font-medium ${
+            a.linkedin_status === 'accepted' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
+            a.linkedin_status === 'sent'     ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' :
+            a.linkedin_status === 'ignored'  ? 'bg-red-500/10 border-red-500/30 text-red-400' :
+                                                'bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)]'
+          }`}>
+            <div className="flex items-center gap-2">
+              {a.linkedin_status === 'accepted' && <><CheckCircle2 size={14} /> Acceptée le {formatDateTime(a.linkedin_connect_date)}</>}
+              {a.linkedin_status === 'sent'     && <><Send size={14} /> Demande envoyée le {formatDateTime(a.linkedin_connect_date)}</>}
+              {a.linkedin_status === 'ignored'  && <><XCircle size={14} /> Ignorée le {formatDateTime(a.linkedin_connect_date)}</>}
+              {!a.linkedin_status && <><Linkedin size={14} /> Profil LinkedIn dispo — aucune demande envoyée</>}
+            </div>
+            {a.linkedin && (
+              <a href={a.linkedin} target="_blank" rel="noreferrer"
+                className="flex items-center gap-1 hover:opacity-75">
+                <Linkedin size={12} /> Profil
+              </a>
+            )}
+          </div>
+        )}
+
+        {currentTier === 'skipped' && a.call_skipped_at && (
+          <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-zinc-500/10 border border-zinc-500/30 text-zinc-400 text-xs font-medium">
+            <SkipForward size={14} />
+            Skippé {new Date(a.call_skipped_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} — dernière chance
+          </div>
+        )}
+
         {/* Agency name + city */}
         <div className="flex items-start justify-between mb-6">
           <div>
@@ -257,7 +347,7 @@ export default function ColdCall() {
           className="w-full px-4 py-2.5 mb-6 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-sm placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]" />
 
         {/* Result buttons */}
-        <div className="grid grid-cols-6 gap-2">
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
           {RESULTS.map(r => (
             <button key={r.key}
               onClick={() => r.key === 'rappeler' ? setShowCallbackPicker(true) : recordCall(r.key)}
@@ -308,12 +398,23 @@ export default function ColdCall() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-xl font-bold">Cold Call</h1>
-          <p className="text-sm text-[var(--text-muted)] mt-1">{availableCount} agences disponibles</p>
+          <p className="text-sm text-[var(--text-muted)] mt-1">
+            {availableCount} disponibles
+            {acceptedCount > 0 && (
+              <> · <span className="text-emerald-400 font-semibold">{acceptedCount}</span> acceptés LinkedIn</>
+            )}
+            {sentCount > 0 && (
+              <> · <span className="text-blue-400 font-semibold">{sentCount}</span> demandes envoyées</>
+            )}
+            {skippedCount > 0 && (
+              <> · <span className="text-zinc-400 font-semibold">{skippedCount}</span> skippés</>
+            )}
+          </p>
         </div>
       </div>
 
       {/* KPI row */}
-      <div className="grid grid-cols-5 gap-3 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
           <div className="flex items-center gap-2 text-[var(--text-muted)] mb-1">
             <Phone size={14} />

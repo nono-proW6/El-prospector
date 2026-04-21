@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import type { Conversation, Message } from '../lib/types'
 import {
   Search, Play, Square, Zap, Mail, ChevronDown, ChevronUp, Info, RefreshCw,
-  X, Phone, Globe, User, Hash, Star, MessageSquare, ArrowUpRight, ArrowDownLeft, Clock, ExternalLink,
+  X, Hash, Star, MessageSquare, ArrowUpRight, ArrowDownLeft, Clock, ExternalLink,
 } from 'lucide-react'
 
 const COLORS = {
