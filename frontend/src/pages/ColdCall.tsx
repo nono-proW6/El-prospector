@@ -53,13 +53,15 @@ export default function ColdCall() {
   const [callNotes, setCallNotes] = useState('')
   const [transitioning, setTransitioning] = useState(false)
 
-  // Tiered pools: accepted LinkedIn (hottest) → sent request → rest → skipped (last chance)
+  // Tiered pools: callbacks due today → accepted LinkedIn → sent → rest → 24h retry (pas_décroché) → skipped (last chance)
+  const callbackPoolRef = useRef<string[]>([])
   const acceptedPoolRef = useRef<string[]>([])
   const sentPoolRef = useRef<string[]>([])
   const restPoolRef = useRef<string[]>([])
+  const retryPoolRef = useRef<string[]>([])
   const skippedPoolRef = useRef<string[]>([])
   const usedRef = useRef<Set<string>>(new Set())
-  const [currentTier, setCurrentTier] = useState<'accepted' | 'sent' | 'rest' | 'skipped' | null>(null)
+  const [currentTier, setCurrentTier] = useState<'callback' | 'accepted' | 'sent' | 'rest' | 'retry' | 'skipped' | null>(null)
 
   const [todayCalls, setTodayCalls] = useState(0)
   const [todayDecroches, setTodayDecroches] = useState(0)
@@ -68,12 +70,22 @@ export default function ColdCall() {
   const [calledAgencies, setCalledAgencies] = useState<Agency[]>([])
   const [showCalled, setShowCalled] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingNotes, setEditingNotes] = useState('')
   const [availableCount, setAvailableCount] = useState(0)
   const [acceptedCount, setAcceptedCount] = useState(0)
   const [sentCount, setSentCount] = useState(0)
   const [skippedCount, setSkippedCount] = useState(0)
 
   const motRef = useRef(MOTIVATIONS[0])
+
+  // Pré-remplit notes/date quand on recontacte (callback ou retry)
+  useEffect(() => {
+    if (!currentAgency) return
+    if (currentTier === 'callback' || currentTier === 'retry') {
+      setCallNotes(currentAgency.call_notes || '')
+      if (currentAgency.callback_date) setCallbackDate(currentAgency.callback_date)
+    }
+  }, [currentAgency, currentTier])
 
   // ─── Data loading ─────────────────────────────────────
   useEffect(() => {
@@ -90,17 +102,24 @@ export default function ColdCall() {
   }, [])
 
   async function loadAvailable() {
+    const today = new Date().toISOString().split('T')[0]
     const base = () => supabase.from('agencies').select('id', { count: 'exact', head: true })
       .eq('enrichment_status', 'done').eq('is_franchise', false)
       .not('phone', 'is', null).gte('score', 4).is('call_result', null)
 
-    const [total, accepted, sent, skipped] = await Promise.all([
+    const callbackDue = supabase.from('agencies').select('id', { count: 'exact', head: true })
+      .eq('enrichment_status', 'done').eq('is_franchise', false)
+      .not('phone', 'is', null).gte('score', 4)
+      .eq('call_result', 'rappeler').lte('callback_date', today)
+
+    const [total, accepted, sent, skipped, callback] = await Promise.all([
       base(),
       base().eq('linkedin_status', 'accepted').is('call_skipped_at', null),
       base().eq('linkedin_status', 'sent').is('call_skipped_at', null),
       base().not('call_skipped_at', 'is', null),
+      callbackDue,
     ])
-    setAvailableCount(total.count || 0)
+    setAvailableCount((total.count || 0) + (callback.count || 0))
     setAcceptedCount(accepted.count || 0)
     setSentCount(sent.count || 0)
     setSkippedCount(skipped.count || 0)
@@ -113,12 +132,20 @@ export default function ColdCall() {
   }
 
   // ─── Session logic ────────────────────────────────────
-  async function drainPool(pool: React.MutableRefObject<string[]>, tier: 'accepted' | 'sent' | 'rest' | 'skipped'): Promise<Agency | null> {
+  // 'callback' allows call_result='rappeler'; 'retry' allows 'pas_décroché'; others require null
+  async function drainPool(
+    pool: React.MutableRefObject<string[]>,
+    tier: 'callback' | 'accepted' | 'sent' | 'rest' | 'retry' | 'skipped',
+  ): Promise<Agency | null> {
     while (pool.current.length > 0) {
       const id = pool.current.shift()!
       if (usedRef.current.has(id)) continue
       const { data } = await supabase.from('agencies').select('*').eq('id', id).single()
-      if (data && !data.call_result) {
+      if (!data) continue
+      const ok = tier === 'callback' ? data.call_result === 'rappeler'
+        : tier === 'retry'    ? data.call_result === 'pas_décroché'
+        :                       !data.call_result
+      if (ok) {
         usedRef.current.add(id)
         setCurrentTier(tier)
         return data as Agency
@@ -128,38 +155,56 @@ export default function ColdCall() {
   }
 
   async function fetchNext(): Promise<Agency | null> {
-    // Priority: accepted → sent → rest → skipped (last resort)
-    return (await drainPool(acceptedPoolRef, 'accepted'))
+    // Priority: callbacks due → accepted → sent → rest → 24h retry → skipped (last resort)
+    return (await drainPool(callbackPoolRef, 'callback'))
+      || (await drainPool(acceptedPoolRef, 'accepted'))
       || (await drainPool(sentPoolRef, 'sent'))
       || (await drainPool(restPoolRef, 'rest'))
+      || (await drainPool(retryPoolRef, 'retry'))
       || (await drainPool(skippedPoolRef, 'skipped'))
   }
 
   async function buildPools() {
-    const base = () => supabase.from('agencies').select('id, score')
+    const today = new Date().toISOString().split('T')[0]
+    const cutoff24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+
+    const baseEligible = () => supabase.from('agencies').select('id, score')
       .eq('enrichment_status', 'done').eq('is_franchise', false)
-      .not('phone', 'is', null).gte('score', 4).is('call_result', null)
+      .not('phone', 'is', null).gte('score', 4)
+
+    const basePending = () => baseEligible().is('call_result', null)
 
     // Unskipped pools — ordered by score DESC
-    const unskipped = () => base().is('call_skipped_at', null).order('score', { ascending: false, nullsFirst: false })
-    // Skipped pool — oldest skip first (second-chance logic)
-    const skipped = () => base().not('call_skipped_at', 'is', null).order('call_skipped_at', { ascending: true })
+    const unskipped = () => basePending().is('call_skipped_at', null).order('score', { ascending: false, nullsFirst: false })
+    // Skipped pool — oldest skip first
+    const skipped = () => basePending().not('call_skipped_at', 'is', null).order('call_skipped_at', { ascending: true })
+    // Callbacks due today or earlier — oldest first
+    const callbacks = () => baseEligible().eq('call_result', 'rappeler').lte('callback_date', today)
+      .order('callback_date', { ascending: true })
+    // pas_décroché older than 24h — oldest first
+    const retry = () => baseEligible().eq('call_result', 'pas_décroché').lte('call_date', cutoff24h)
+      .order('call_date', { ascending: true })
 
-    const [accepted, sent, rest, skippedData] = await Promise.all([
+    const [callback, accepted, sent, rest, retryData, skippedData] = await Promise.all([
+      callbacks().limit(100),
       unskipped().eq('linkedin_status', 'accepted').limit(100),
       unskipped().eq('linkedin_status', 'sent').limit(100),
       unskipped().is('linkedin_status', null).limit(200),
+      retry().limit(200),
       skipped().limit(200),
     ])
+    callbackPoolRef.current = (callback.data || []).map(d => d.id)
     acceptedPoolRef.current = (accepted.data || []).map(d => d.id)
     sentPoolRef.current = (sent.data || []).map(d => d.id)
     restPoolRef.current = (rest.data || []).map(d => d.id)
+    retryPoolRef.current = (retryData.data || []).map(d => d.id)
     skippedPoolRef.current = (skippedData.data || []).map(d => d.id)
   }
 
   async function startSession() {
     setLoading(true)
-    acceptedPoolRef.current = []; sentPoolRef.current = []; restPoolRef.current = []; skippedPoolRef.current = []
+    callbackPoolRef.current = []; acceptedPoolRef.current = []; sentPoolRef.current = []
+    restPoolRef.current = []; retryPoolRef.current = []; skippedPoolRef.current = []
     usedRef.current = new Set()
     setCompleted(0); setStreak(0)
     await buildPools()
@@ -221,6 +266,12 @@ export default function ColdCall() {
   async function changeResult(id: string, result: CallResult) {
     await supabase.from('agencies').update({ call_result: result }).eq('id', id)
     setCalledAgencies(prev => prev.map(a => a.id === id ? { ...a, call_result: result } : a))
+  }
+
+  async function saveNotes(id: string) {
+    const notes = editingNotes.trim() || null
+    await supabase.from('agencies').update({ call_notes: notes }).eq('id', id)
+    setCalledAgencies(prev => prev.map(a => a.id === id ? { ...a, call_notes: notes } : a))
     setEditingId(null)
   }
 
@@ -278,6 +329,20 @@ export default function ColdCall() {
                 <Linkedin size={12} /> Profil
               </a>
             )}
+          </div>
+        )}
+
+        {currentTier === 'callback' && a.callback_date && (
+          <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-medium">
+            <CalendarClock size={14} />
+            Rappel prévu {new Date(a.callback_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+          </div>
+        )}
+
+        {currentTier === 'retry' && a.call_date && (
+          <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-medium">
+            <PhoneMissed size={14} />
+            Pas décroché le {new Date(a.call_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} — on retente
           </div>
         )}
 
@@ -488,7 +553,7 @@ export default function ColdCall() {
                       <div className="flex-1 min-w-0">
                         <span className="text-sm font-medium">{a.name}</span>
                         <span className="text-xs text-[var(--text-muted)] ml-2">{a.city}</span>
-                        {a.call_notes && <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate">{a.call_notes}</p>}
+                        {a.call_notes && <p className="text-xs text-[var(--text-muted)] mt-0.5 whitespace-pre-wrap break-words">{a.call_notes}</p>}
                       </div>
 
                       {a.call_date && (
@@ -497,7 +562,10 @@ export default function ColdCall() {
                         </span>
                       )}
 
-                      <button onClick={() => setEditingId(editingId === a.id ? null : a.id)}
+                      <button onClick={() => {
+                          if (editingId === a.id) { setEditingId(null) }
+                          else { setEditingId(a.id); setEditingNotes(a.call_notes || '') }
+                        }}
                         className={`px-2.5 py-1 rounded-lg text-xs font-medium shrink-0 transition-colors ${cfg?.badgeClass || 'bg-zinc-500/15 text-zinc-400'}`}>
                         {cfg?.label || a.call_result}
                         {a.call_result === 'rappeler' && a.callback_date && (
@@ -512,15 +580,26 @@ export default function ColdCall() {
                     </div>
 
                     {editingId === a.id && (
-                      <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-[var(--border)]">
-                        {RESULTS.map(r => (
-                          <button key={r.key} onClick={() => changeResult(a.id, r.key)}
-                            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                              a.call_result === r.key ? 'ring-1 ring-[var(--accent)] ' : ''
-                            }${r.badgeClass}`}>
-                            {r.icon} {r.label}
-                          </button>
-                        ))}
+                      <div className="mt-3 pt-3 border-t border-[var(--border)] space-y-3">
+                        <div className="flex flex-wrap gap-1.5">
+                          {RESULTS.map(r => (
+                            <button key={r.key} onClick={() => changeResult(a.id, r.key)}
+                              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                a.call_result === r.key ? 'ring-1 ring-[var(--accent)] ' : ''
+                              }${r.badgeClass}`}>
+                              {r.icon} {r.label}
+                            </button>
+                          ))}
+                        </div>
+                        <textarea value={editingNotes} onChange={e => setEditingNotes(e.target.value)}
+                          rows={2} placeholder="Notes d'appel..."
+                          className="w-full px-3 py-2 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-sm placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] resize-none" />
+                        <div className="flex justify-end gap-2">
+                          <button onClick={() => setEditingId(null)}
+                            className="px-3 py-1.5 rounded-lg text-xs text-[var(--text-muted)] hover:bg-[var(--surface-hover)]">Annuler</button>
+                          <button onClick={() => saveNotes(a.id)}
+                            className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-medium hover:bg-[var(--accent-hover)]">Enregistrer</button>
+                        </div>
                       </div>
                     )}
                   </div>
