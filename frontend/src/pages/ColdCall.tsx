@@ -6,7 +6,7 @@ import {
   CalendarClock, Trophy, Flame, Target, Loader2,
   ThumbsDown, PhoneMissed, PhoneOff, SkipForward,
   RotateCcw, ChevronDown, ChevronRight, Clock,
-  TrendingUp, CheckCircle2, Send, Linkedin, XCircle
+  TrendingUp, CheckCircle2, Send, Linkedin, XCircle, Users
 } from 'lucide-react'
 
 function formatDateTime(iso: string | null): string {
@@ -44,6 +44,10 @@ export default function ColdCall() {
 
   const [sessionSize, setSessionSize] = useState(() => Number(localStorage.getItem('cc_session_size')) || 10)
   const [dailyGoal, setDailyGoal] = useState(() => Number(localStorage.getItem('cc_daily_goal')) || 15)
+  const [minRatings, setMinRatings] = useState(() => {
+    const v = localStorage.getItem('cc_min_ratings')
+    return v === null ? 15 : Number(v)
+  })
 
   const [currentAgency, setCurrentAgency] = useState<Agency | null>(null)
   const [completed, setCompleted] = useState(0)
@@ -103,9 +107,14 @@ export default function ColdCall() {
 
   async function loadAvailable() {
     const today = new Date().toISOString().split('T')[0]
-    const base = () => supabase.from('agencies').select('id', { count: 'exact', head: true })
-      .eq('enrichment_status', 'done').eq('is_franchise', false)
-      .not('phone', 'is', null).gte('score', 4).is('call_result', null)
+    // Filtre taille : appliqué aux pools de nouvelles cibles (pas aux callbacks déjà engagés)
+    const base = () => {
+      let q = supabase.from('agencies').select('id', { count: 'exact', head: true })
+        .eq('enrichment_status', 'done').eq('is_franchise', false)
+        .not('phone', 'is', null).gte('score', 4).is('call_result', null)
+      if (minRatings > 0) q = q.gte('user_ratings_total', minRatings)
+      return q
+    }
 
     const callbackDue = supabase.from('agencies').select('id', { count: 'exact', head: true })
       .eq('enrichment_status', 'done').eq('is_franchise', false)
@@ -172,16 +181,23 @@ export default function ColdCall() {
       .eq('enrichment_status', 'done').eq('is_franchise', false)
       .not('phone', 'is', null).gte('score', 4)
 
-    const basePending = () => baseEligible().is('call_result', null)
+    // basePending = nouvelles cibles. On y applique le filtre taille (si > 0)
+    const basePending = () => {
+      let q = baseEligible().is('call_result', null)
+      if (minRatings > 0) q = q.gte('user_ratings_total', minRatings)
+      return q
+    }
 
-    // Unskipped pools — ordered by score DESC
-    const unskipped = () => basePending().is('call_skipped_at', null).order('score', { ascending: false, nullsFirst: false })
+    // Unskipped pools — tri score DESC puis user_ratings_total DESC (grosses structures en priorité à score égal)
+    const unskipped = () => basePending().is('call_skipped_at', null)
+      .order('score', { ascending: false, nullsFirst: false })
+      .order('user_ratings_total', { ascending: false, nullsFirst: false })
     // Skipped pool — oldest skip first
     const skipped = () => basePending().not('call_skipped_at', 'is', null).order('call_skipped_at', { ascending: true })
-    // Callbacks due today or earlier — oldest first
+    // Callbacks due today or earlier — oldest first (PAS de filtre taille : engagement pris)
     const callbacks = () => baseEligible().eq('call_result', 'rappeler').lte('callback_date', today)
       .order('callback_date', { ascending: true })
-    // pas_décroché older than 24h — oldest first
+    // pas_décroché older than 24h — oldest first (PAS de filtre taille : on a déjà tenté)
     const retry = () => baseEligible().eq('call_result', 'pas_décroché').lte('call_date', cutoff24h)
       .order('call_date', { ascending: true })
 
@@ -402,6 +418,14 @@ export default function ColdCall() {
           {a.rating && (
             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)]">
               <Star size={13} /> {a.rating}
+              {a.user_ratings_total != null && (
+                <span className="opacity-60">({a.user_ratings_total})</span>
+              )}
+            </span>
+          )}
+          {!a.rating && a.user_ratings_total != null && (
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)]">
+              <Users size={13} /> {a.user_ratings_total} avis
             </span>
           )}
         </div>
@@ -479,7 +503,7 @@ export default function ColdCall() {
       </div>
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-8">
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
           <div className="flex items-center gap-2 text-[var(--text-muted)] mb-1">
             <Phone size={14} />
@@ -521,6 +545,16 @@ export default function ColdCall() {
           <input type="number" value={dailyGoal}
             onChange={e => { setDailyGoal(Number(e.target.value)); localStorage.setItem('cc_daily_goal', e.target.value) }}
             className="w-full bg-transparent text-xl font-bold focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+        </div>
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
+          <div className="flex items-center gap-2 text-[var(--text-muted)] mb-1">
+            <Users size={14} />
+            <span className="text-[10px] uppercase tracking-wider">Taille min</span>
+          </div>
+          <input type="number" min={0} value={minRatings}
+            onChange={e => { setMinRatings(Number(e.target.value)); localStorage.setItem('cc_min_ratings', e.target.value); loadAvailable() }}
+            className="w-full bg-transparent text-xl font-bold focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+          <p className="text-[9px] text-[var(--text-muted)] mt-0.5">avis Google min</p>
         </div>
       </div>
 
