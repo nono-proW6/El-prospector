@@ -8,11 +8,12 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 const LOCK_FILE = "/tmp/enrichment.lock";
 const MAX_PER_RUN = 5;
 
-const PROMPT = `Tu recherches les informations de contact d'une agence immobilière française. Le but est de la contacter en se faisant passer pour un prospect dans un premier temps.
+const PROMPT = `Tu évalues et enrichis une agence immobilière française pour une campagne de prospection commerciale B2B (cold call + email).
 
 AGENCE : {name} - {city}
 Site web : {website}
 Téléphone : {phone}
+Note Google : {rating} ({user_ratings_total} avis)
 
 D'abord, est-ce réellement une agence immobilière qui fait de la transaction ? Si c'est clairement autre chose (diagnostiqueur, notaire, courtier en prêt, constructeur, etc.), mets valid_agency=false. En cas de doute, garde-la.
 
@@ -22,13 +23,20 @@ Si c'est une vraie agence, recherche :
 3. Le LinkedIn du gérant
 4. Franchise ou indépendant ?
 5. SIRET
-6. Score commercial (1-5) : quelle chance de closer cette agence sur une assistante commerciale IA 24/7 qui répond aux prospects acheteurs/vendeurs, collecte et analyse les dossiers, propose les créneaux de visite optimisés et gère l'agenda ? C'est nouveau en France, personne n'est équipé. Score 5 = cible idéale (petite équipe débordée, beaucoup d'annonces, indépendant qui fait tout seul). Score 1 = sera dur à convaincre (réseau très hiérarchisé où le directeur local ne décide pas seul). Une phrase de raison.
-7. Brief commercial (1-2 phrases) : un conseil concret pour approcher cette agence et vendre le produit.
+6. Estimation du nombre de négociateurs/agents dans l'agence (estimated_team_size, entier). Regarde la page "équipe", "nos agents", "notre équipe" du site web, le LinkedIn de l'agence, les mentions textuelles. Si impossible à estimer avec une confiance raisonnable, mets null. Ne compte QUE l'effectif local de cette agence, pas le réseau national.
+7. Score commercial (1-5) pour une campagne de prospection sur une assistante commerciale IA 24/7 (réponse aux prospects acheteurs/vendeurs, qualification des dossiers, prise de RDV). Notre cible IDÉALE = une **agence indépendante structurée** avec 3 à 15 négociateurs, activité réelle (≥30 avis Google), présence web pro, gérant décideur local.
+   - Score 5 = cible parfaite : indépendante, 3-15 négociateurs, ≥30 avis Google, site web pro, gérant qui décide seul
+   - Score 4 = bonne cible : indépendante bien structurée, hors de la fourchette idéale mais volume d'activité solide
+   - Score 3 = intérêt moyen : soit trop petite (1-2 négociateurs), soit franchise locale avec marge de décision
+   - Score 2 = faible : solo sans structure visible, ou franchise très encadrée
+   - Score 1 = à éviter : siège de réseau, structure hiérarchique sans autonomie locale, micro-structure sans moyens
+   IMPORTANT : un solo (1-2 agents) ne doit PAS être noté 5, même s'il semble débordé — on veut de la structure et du budget. Une phrase de raison expliquant le score.
+8. Brief commercial (1-2 phrases) : un conseil concret pour approcher cette agence et vendre le produit.
 
 Ne cherche rien d'autre. Ne renvoie QUE des infos trouvées et vérifiées. Si pas trouvé = "NON_TROUVE".
 
 JSON valide sans markdown :
-{"valid_agency":true/false,"reject_reason":"","email":"...","owner_name":"...","linkedin":"...","is_franchise":true/false,"siret":"...","confidence":"high/medium/low","score":3,"score_reason":"...","sales_brief":"...","notes":"..."}`;
+{"valid_agency":true/false,"reject_reason":"","email":"...","owner_name":"...","linkedin":"...","is_franchise":true/false,"siret":"...","estimated_team_size":5,"confidence":"high/medium/low","score":4,"score_reason":"...","sales_brief":"...","notes":"..."}`;
 
 function acquireLock() {
   if (existsSync(LOCK_FILE)) {
@@ -95,7 +103,9 @@ async function enrichAgency(agency) {
     .replace("{name}", agency.name || "")
     .replace("{city}", agency.city || "")
     .replace("{website}", agency.website || "aucun")
-    .replace("{phone}", agency.phone || "aucun");
+    .replace("{phone}", agency.phone || "aucun")
+    .replace("{rating}", agency.rating != null ? String(agency.rating) : "inconnue")
+    .replace("{user_ratings_total}", agency.user_ratings_total != null ? String(agency.user_ratings_total) : "0");
 
   try {
     const text = await callClaude(prompt);
@@ -131,6 +141,7 @@ async function enrichAgency(agency) {
     if (typeof data.score === "number") updateFields.score = data.score;
     if (data.score_reason) updateFields.score_reason = data.score_reason;
     if (data.sales_brief) updateFields.sales_brief = data.sales_brief;
+    if (typeof data.estimated_team_size === "number") updateFields.estimated_team_size = data.estimated_team_size;
 
     await supabase.from("agencies").update(updateFields).eq("id", agency.id);
 
@@ -161,7 +172,7 @@ export async function enrichBatch(batchSize) {
 
   const { data: agencies, error } = await supabase
     .from("agencies")
-    .select("id, name, city, website, phone, email, owner_name")
+    .select("id, name, city, website, phone, email, owner_name, rating, user_ratings_total")
     .eq("enrichment_status", "pending")
     .not("website", "is", null)
     .order("created_at", { ascending: true })

@@ -135,9 +135,23 @@ export default function ColdCall() {
   }
 
   async function loadCalled() {
+    // Inclut les agences appelées (call_result) ET celles skippées (call_skipped_at)
     const { data } = await supabase.from('agencies').select('*')
-      .not('call_result', 'is', null).order('call_date', { ascending: false }).limit(50)
-    setCalledAgencies(data || [])
+      .or('call_result.not.is.null,call_skipped_at.not.is.null')
+      .limit(50)
+    // Tri côté JS par max(call_date, call_skipped_at) DESC
+    const sorted = (data || []).sort((a, b) => {
+      const ta = Math.max(
+        a.call_date ? new Date(a.call_date).getTime() : 0,
+        a.call_skipped_at ? new Date(a.call_skipped_at).getTime() : 0,
+      )
+      const tb = Math.max(
+        b.call_date ? new Date(b.call_date).getTime() : 0,
+        b.call_skipped_at ? new Date(b.call_skipped_at).getTime() : 0,
+      )
+      return tb - ta
+    })
+    setCalledAgencies(sorted)
   }
 
   // ─── Session logic ────────────────────────────────────
@@ -249,9 +263,16 @@ export default function ColdCall() {
 
   async function skip() {
     if (currentAgency) {
-      await supabase.from('agencies').update({
+      const update: Record<string, unknown> = {
         call_skipped_at: new Date().toISOString(),
-      }).eq('id', currentAgency.id)
+      }
+      // Préserver la note saisie (sinon perdue)
+      if (callNotes.trim()) update.call_notes = callNotes
+      // Préserver la callback_date modifiée (sinon écrasée si l'user l'a changée)
+      if (callbackDate && callbackDate !== currentAgency.callback_date) {
+        update.callback_date = callbackDate
+      }
+      await supabase.from('agencies').update(update).eq('id', currentAgency.id)
     }
     advance()
   }
@@ -274,7 +295,10 @@ export default function ColdCall() {
   }
 
   async function release(id: string) {
-    await supabase.from('agencies').update({ call_result: null, call_date: null, callback_date: null, call_notes: null }).eq('id', id)
+    await supabase.from('agencies').update({
+      call_result: null, call_date: null, callback_date: null, call_notes: null,
+      call_skipped_at: null,
+    }).eq('id', id)
     setCalledAgencies(prev => prev.filter(a => a.id !== id))
     setAvailableCount(c => c + 1)
   }
@@ -426,6 +450,15 @@ export default function ColdCall() {
           {!a.rating && a.user_ratings_total != null && (
             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)]">
               <Users size={13} /> {a.user_ratings_total} avis
+            </span>
+          )}
+          {a.estimated_team_size != null && (
+            <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border ${
+              a.estimated_team_size >= 3
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+            }`}>
+              <Users size={13} /> {a.estimated_team_size} négociateur{a.estimated_team_size > 1 ? 's' : ''}
             </span>
           )}
         </div>
@@ -581,6 +614,8 @@ export default function ColdCall() {
             <div className="space-y-2">
               {calledAgencies.map(a => {
                 const cfg = RESULT_MAP[a.call_result as CallResult]
+                const isSkippedOnly = !a.call_result && a.call_skipped_at
+                const displayDate = a.call_date || a.call_skipped_at
                 return (
                   <div key={a.id} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -590,9 +625,9 @@ export default function ColdCall() {
                         {a.call_notes && <p className="text-xs text-[var(--text-muted)] mt-0.5 whitespace-pre-wrap break-words">{a.call_notes}</p>}
                       </div>
 
-                      {a.call_date && (
+                      {displayDate && (
                         <span className="text-[10px] text-[var(--text-muted)] shrink-0">
-                          {new Date(a.call_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                          {new Date(displayDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                         </span>
                       )}
 
@@ -600,8 +635,10 @@ export default function ColdCall() {
                           if (editingId === a.id) { setEditingId(null) }
                           else { setEditingId(a.id); setEditingNotes(a.call_notes || '') }
                         }}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-medium shrink-0 transition-colors ${cfg?.badgeClass || 'bg-zinc-500/15 text-zinc-400'}`}>
-                        {cfg?.label || a.call_result}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium shrink-0 transition-colors flex items-center gap-1 ${
+                          isSkippedOnly ? 'bg-zinc-500/15 text-zinc-400' : cfg?.badgeClass || 'bg-zinc-500/15 text-zinc-400'
+                        }`}>
+                        {isSkippedOnly ? <><SkipForward size={11} /> Skippé</> : (cfg?.label || a.call_result)}
                         {a.call_result === 'rappeler' && a.callback_date && (
                           <span className="ml-1 opacity-60">{new Date(a.callback_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
                         )}

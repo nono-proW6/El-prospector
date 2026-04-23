@@ -19,6 +19,7 @@ export interface Agency {
   sales_brief: string | null
   rating: number | null
   user_ratings_total: number | null
+  estimated_team_size: number | null
   listing_title: string | null
   listing_price: string | null
   listing_url: string | null
