@@ -120,6 +120,7 @@ export default function ColdCall() {
       .eq('enrichment_status', 'done').eq('is_franchise', false)
       .not('phone', 'is', null).gte('score', 4)
       .eq('call_result', 'rappeler').lte('callback_date', today)
+      .is('call_skipped_at', null)
 
     const [total, accepted, sent, skipped, callback] = await Promise.all([
       base(),
@@ -135,12 +136,23 @@ export default function ColdCall() {
   }
 
   async function loadCalled() {
-    // Inclut les agences appelées (call_result) ET celles skippées (call_skipped_at)
-    const { data } = await supabase.from('agencies').select('*')
-      .or('call_result.not.is.null,call_skipped_at.not.is.null')
-      .limit(50)
-    // Tri côté JS par max(call_date, call_skipped_at) DESC
-    const sorted = (data || []).sort((a, b) => {
+    // Deux requêtes ordonnées serveur (sinon .limit() renvoie un lot arbitraire),
+    // puis merge + dédup par id en gardant l'événement le plus récent.
+    const [calledRes, skippedRes] = await Promise.all([
+      supabase.from('agencies').select('*')
+        .not('call_result', 'is', null)
+        .order('call_date', { ascending: false, nullsFirst: false })
+        .limit(50),
+      supabase.from('agencies').select('*')
+        .not('call_skipped_at', 'is', null)
+        .order('call_skipped_at', { ascending: false })
+        .limit(50),
+    ])
+    const byId = new Map<string, Agency>()
+    for (const a of [...(calledRes.data || []), ...(skippedRes.data || [])]) {
+      byId.set(a.id, a as Agency)
+    }
+    const sorted = Array.from(byId.values()).sort((a, b) => {
       const ta = Math.max(
         a.call_date ? new Date(a.call_date).getTime() : 0,
         a.call_skipped_at ? new Date(a.call_skipped_at).getTime() : 0,
@@ -150,7 +162,7 @@ export default function ColdCall() {
         b.call_skipped_at ? new Date(b.call_skipped_at).getTime() : 0,
       )
       return tb - ta
-    })
+    }).slice(0, 50)
     setCalledAgencies(sorted)
   }
 
@@ -209,10 +221,14 @@ export default function ColdCall() {
     // Skipped pool — oldest skip first
     const skipped = () => basePending().not('call_skipped_at', 'is', null).order('call_skipped_at', { ascending: true })
     // Callbacks due today or earlier — oldest first (PAS de filtre taille : engagement pris)
+    // Exclut les skippés : un rappeler skippé reste en base mais ne re-surface pas (reset via historique)
     const callbacks = () => baseEligible().eq('call_result', 'rappeler').lte('callback_date', today)
+      .is('call_skipped_at', null)
       .order('callback_date', { ascending: true })
     // pas_décroché older than 24h — oldest first (PAS de filtre taille : on a déjà tenté)
+    // Idem : skip = ne plus re-surfacer automatiquement
     const retry = () => baseEligible().eq('call_result', 'pas_décroché').lte('call_date', cutoff24h)
+      .is('call_skipped_at', null)
       .order('call_date', { ascending: true })
 
     const [callback, accepted, sent, rest, retryData, skippedData] = await Promise.all([
