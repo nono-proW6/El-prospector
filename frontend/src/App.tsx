@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
-import { Building2, BarChart3, Map, PhoneCall, MailQuestion, Activity, ClipboardList, Headset, Linkedin, FileText } from 'lucide-react'
+import { Building2, BarChart3, Map, PhoneCall, MailQuestion, Activity, ClipboardList, Headset, Linkedin, FileText, Target } from 'lucide-react'
 import Agencies from './pages/Agencies'
 import Dashboard from './pages/Dashboard'
 import ScanMap from './pages/ScanMap'
@@ -10,6 +10,7 @@ import ListingEnrich from './pages/ListingEnrich'
 import ColdCall from './pages/ColdCall'
 import LinkedInPage from './pages/LinkedIn'
 import Reports from './pages/Reports'
+import Habits from './pages/Habits'
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
           <NavItem to="/cold-call" icon={<Headset size={18} />} label="Cold Call" />
           <NavItem to="/linkedin" icon={<Linkedin size={18} />} label="LinkedIn" />
           <NavItem to="/reports" icon={<FileText size={18} />} label="Rapports" />
+          <NavItem to="/habits" icon={<Target size={18} />} label="Habitudes" />
           <NavItem to="/enrichment" icon={<PhoneCall size={18} />} label="Contacts manuels" />
           <NavItem to="/listing-enrich" icon={<ClipboardList size={18} />} label="Annonces" />
           <NavItem to="/unmatched" icon={<MailQuestion size={18} />} label="Non-matches" />
@@ -38,6 +40,7 @@ function App() {
             <Route path="/cold-call" element={<ColdCall />} />
             <Route path="/linkedin" element={<LinkedInPage />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/habits" element={<Habits />} />
             <Route path="/enrichment" element={<Enrichment />} />
             <Route path="/listing-enrich" element={<ListingEnrich />} />
             <Route path="/unmatched" element={<UnmatchedEmails />} />
@@ -50,9 +53,10 @@ function App() {
           className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--border)] bg-[var(--bg)]/95 backdrop-blur-md"
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         >
-          <div className="grid grid-cols-3">
+          <div className="grid grid-cols-4">
             <BottomNavItem to="/cold-call" icon={<Headset size={22} />} label="Cold Call" />
             <BottomNavItem to="/linkedin" icon={<Linkedin size={22} />} label="LinkedIn" />
+            <BottomNavItem to="/habits" icon={<Target size={22} />} label="Habits" />
             <BottomNavItem to="/" icon={<BarChart3 size={22} />} label="Stats" />
           </div>
         </nav>
