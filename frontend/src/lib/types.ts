@@ -6,6 +6,7 @@ export interface Agency {
   source: string | null
   notes: string | null
   phone: string | null
+  manager_phone: string | null
   website: string | null
   owner_name: string | null
   linkedin: string | null
@@ -34,6 +35,10 @@ export interface Agency {
   linkedin_connect_date: string | null
   call_skipped_at: string | null
   linkedin_skipped_at: string | null
+  linkedin_dm_status: string | null
+  linkedin_dm_sent_at: string | null
+  linkedin_conversation_url: string | null
+  linkedin_synced_at: string | null
   department: string | null
   region: string | null
 }
@@ -47,9 +52,9 @@ export interface Conversation {
   first_response_at: string | null
   response_time_minutes: number | null
   nb_exchanges: number
-  visio_accepted: boolean
   no_answer: boolean
   ref: string | null
+  sender_email: string | null
   created_at: string
   agency?: Agency
 }

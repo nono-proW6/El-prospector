@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css'
 import { supabase } from '../lib/supabase'
 import type { Conversation, Message } from '../lib/types'
 import {
-  Search, Play, Square, Zap, Mail, ChevronDown, ChevronUp, Info, RefreshCw,
+  Search, Play, Square, Zap, Mail, ChevronDown, ChevronUp,
   X, Hash, Star, MessageSquare, ArrowUpRight, ArrowDownLeft, Clock, ExternalLink,
 } from 'lucide-react'
 
@@ -25,19 +25,17 @@ const AGENCY_COLORS = {
 }
 
 const PIPELINE_COLORS: Record<string, { color: string; label: string }> = {
-  not_contacted: { color: '#4b5563', label: 'Non contactée' },
-  ready:         { color: '#22c55e', label: 'Prêtes' },        // enrichie + email, pas encore envoyé
-  sent:          { color: '#38bdf8', label: 'Envoyées' },
-  prospect_phase:{ color: '#f59e0b', label: 'Prospect phase' },
-  revealed:      { color: '#a855f7', label: 'Révélées' },
-  report_sent:   { color: '#7c3aed', label: 'Rapport envoyé' },
-  video_sent:    { color: '#6366f1', label: 'Vidéo envoyée' },
-  visio_accepted:{ color: '#34d399', label: 'Visio OK' },
-  no_answer:     { color: '#eab308', label: 'Pas de réponse' },
-  callback:      { color: '#06b6d4', label: 'À rappeler' },
-  closed:        { color: '#ef4444', label: 'Fermées' },
-  lost:          { color: '#ef4444', label: 'Perdu' },
-  wrong_target:  { color: '#f43f5e', label: 'Mauvaise cible' },
+  not_contacted:   { color: '#4b5563', label: 'Non contactée' },
+  ready:           { color: '#22c55e', label: 'Prêtes' },        // enrichie + email, pas encore envoyé
+  sent:            { color: '#38bdf8', label: 'Envoyées' },
+  audit_requested: { color: '#10b981', label: 'Audit demandé' },
+  audit_sent:      { color: '#3b82f6', label: 'Audit envoyé' },
+  audit_refused:   { color: '#ef4444', label: 'Audit refusé' },
+  autoresponder:   { color: '#71717a', label: 'Autorépondeur' },
+  no_answer:       { color: '#eab308', label: 'Pas de réponse' },
+  callback:        { color: '#06b6d4', label: 'À rappeler' },
+  closed:          { color: '#6b7280', label: 'Fermées' },
+  wrong_target:    { color: '#f43f5e', label: 'Mauvaise cible' },
 }
 
 type MapViewMode = 'enrichment' | 'pipeline'
@@ -207,10 +205,7 @@ export default function ScanMap() {
   const [readyCount, setReadyCount] = useState(0)
   const [convStats, setConvStats] = useState<Record<string, number>>({})
   const [showEmailStats, setShowEmailStats] = useState(false)
-  // Follow-up (relance) state
-  const [followUpLimit, setFollowUpLimit] = useState(20)
-  const [showFollowUpDoc, setShowFollowUpDoc] = useState(false)
-  const [followUpConfig, setFollowUpConfig] = useState<{ status: string; delay_days: number; max_follow_ups: number }[]>([])
+  // Follow-up (relance) — désactivée pour l'instant (workflow n8n OFF depuis le pivot stratégie audit)
   const highlightedIdsRef = useRef<Set<string>>(new Set())
   const [mapView, setMapView] = useState<MapViewMode>('enrichment')
   const [pipelineStats, setPipelineStats] = useState<Record<string, number>>({})
@@ -261,11 +256,7 @@ export default function ScanMap() {
       if (data) {
         setEmailPaused(data.paused)
         setEmailDailyTarget(data.daily_target ?? 10)
-        setFollowUpLimit(data.daily_follow_up_limit ?? 20)
       }
-    })
-    supabase.from('follow_up_config').select('*').order('delay_days').then(({ data }) => {
-      if (data) setFollowUpConfig(data)
     })
     // Count ready-to-contact agencies (done + email + no conversation yet)
     loadEmailCounts()
@@ -707,10 +698,6 @@ export default function ScanMap() {
 
   async function saveEmailConfig() {
     await supabase.rpc('update_email_config', { p_daily_target: emailDailyTarget })
-  }
-
-  async function saveFollowUpLimit() {
-    await supabase.rpc('update_email_config', { p_daily_follow_up_limit: followUpLimit })
   }
 
   async function runSendEmails() {
@@ -1161,18 +1148,6 @@ export default function ScanMap() {
 
             <div className="w-px h-5 bg-[var(--border)]" />
 
-            <div className="flex items-center gap-1.5">
-              <label className="text-xs text-[var(--text-muted)] shrink-0">Relances/jour</label>
-              <input
-                type="number" min={1} max={100} value={followUpLimit}
-                onChange={(e) => setFollowUpLimit(Number(e.target.value))}
-                onBlur={saveFollowUpLimit}
-                className="w-20 px-2 py-1 text-sm rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] text-center"
-              />
-            </div>
-
-            <div className="w-px h-5 bg-[var(--border)]" />
-
             <button
               onClick={runSendEmails}
               disabled={emailRunning}
@@ -1191,18 +1166,6 @@ export default function ScanMap() {
             >
               Pipeline
               {showEmailStats ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-            </button>
-
-            <button
-              onClick={() => setShowFollowUpDoc(!showFollowUpDoc)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                showFollowUpDoc
-                  ? 'bg-orange-500/20 text-orange-400'
-                  : 'text-[var(--text-muted)] hover:bg-[var(--surface-hover)]'
-              }`}
-            >
-              <RefreshCw size={12} /> Relances
-              {showFollowUpDoc ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             </button>
 
             {emailRunning && (
@@ -1229,78 +1192,26 @@ export default function ScanMap() {
               </div>
               <span className="text-[var(--border)]">→</span>
               <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-amber-400" />
-                <span>Prospect phase ({convStats.prospect_phase ?? 0})</span>
+                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span>Audit demandé ({convStats.audit_requested ?? 0})</span>
               </div>
               <span className="text-[var(--border)]">→</span>
               <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-purple-400" />
-                <span>Révélées ({convStats.revealed ?? 0})</span>
-              </div>
-              <span className="text-[var(--border)]">→</span>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-violet-400" />
-                <span>Rapport envoyé ({convStats.report_sent ?? 0})</span>
-              </div>
-              <span className="text-[var(--border)]">→</span>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-indigo-400" />
-                <span>Vidéo envoyée ({convStats.video_sent ?? 0})</span>
-              </div>
-              <span className="text-[var(--border)]">→</span>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-emerald-400" />
-                <span>Visio OK ({convStats.visio_accepted ?? 0})</span>
+                <div className="w-2 h-2 rounded-full bg-blue-500" />
+                <span>Audit envoyé ({convStats.audit_sent ?? 0})</span>
               </div>
               <span className="text-[var(--border)]">|</span>
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-red-400" />
+                <span>Refusé ({convStats.audit_refused ?? 0})</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-gray-500" />
                 <span>Fermées ({convStats.closed ?? 0})</span>
               </div>
             </div>
           )}
 
-          {showFollowUpDoc && (
-            <div className="px-3 pb-3 text-xs border-t border-[var(--border)] pt-2 space-y-2">
-              <div className="flex items-center gap-1.5 text-orange-400 font-medium">
-                <Info size={12} />
-                <span>Systeme de relance automatique</span>
-              </div>
-              <p className="text-[var(--text-muted)] leading-relaxed">
-                Chaque jour a 8h, les conversations sans reponse sont marquees (delai variable selon le statut, voir ci-dessous). A 9h, les relances sont envoyees automatiquement (limite configurable ci-dessus) via un agent IA adapte au statut.
-              </p>
-              <div className="grid grid-cols-4 gap-2 mt-2">
-                {[
-                  { status: 'sent', label: 'Email envoye', color: 'bg-sky-400', desc: 'Relance du 1er email froid' },
-                  { status: 'prospect_phase', label: 'Prospect phase', color: 'bg-amber-400', desc: 'Relance contextuelle sur la discussion' },
-                  { status: 'revealed', label: 'Revelee', color: 'bg-purple-400', desc: 'Relance post-revelation, ton humble' },
-                  { status: 'report_sent', label: 'Rapport envoye', color: 'bg-violet-400', desc: 'Relance post-rapport, propose la video' },
-                  { status: 'video_sent', label: 'Video envoyee', color: 'bg-indigo-400', desc: 'Relance pour proposer une visio' },
-                ].map((item) => {
-                  const cfg = followUpConfig.find((c) => c.status === item.status)
-                  return (
-                    <div key={item.status} className="rounded-lg bg-[var(--bg)] border border-[var(--border)] p-2">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <div className={`w-2 h-2 rounded-full ${item.color}`} />
-                        <span className="font-medium text-[var(--text)]">{item.label}</span>
-                      </div>
-                      <div className="text-[var(--text-muted)] space-y-0.5">
-                        <div>Delai : <span className="text-[var(--text)]">{cfg?.delay_days ?? '?'}j</span></div>
-                        <div>Max relances : <span className="text-[var(--text)]">{cfg?.max_follow_ups ?? '?'}</span></div>
-                        <div className="mt-1 text-[10px] leading-tight">{item.desc}</div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-              <div className="flex items-center gap-3 mt-2 text-[var(--text-muted)]">
-                <span>Statuts exclus de la relance :</span>
-                {['pending', 'visio_accepted', 'callback', 'closed', 'lost', 'no_answer', 'wrong_target'].map((s) => (
-                  <span key={s} className="px-1.5 py-0.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[10px]">{s}</span>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 

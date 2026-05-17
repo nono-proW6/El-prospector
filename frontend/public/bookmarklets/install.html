@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>El Prospector — Installer le bookmarklet LinkedIn</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #14141d;
+    --surface-hover: #1a1a24;
+    --border: #2a2a3a;
+    --text: #f5f5f7;
+    --text-muted: #888;
+    --accent: #5e9eff;
+    --accent-hover: #7eb0ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 40px 20px;
+    line-height: 1.5;
+  }
+  .container { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 24px; margin-bottom: 8px; }
+  .subtitle { color: var(--text-muted); margin-bottom: 32px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .card h2 { font-size: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+  .step-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-size: 13px; font-weight: 700;
+  }
+  .card p { color: var(--text-muted); font-size: 14px; }
+  .drag-link {
+    display: inline-block;
+    background: linear-gradient(180deg, var(--accent), #4a8ae6);
+    color: #fff !important;
+    padding: 14px 22px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 14px;
+    margin: 16px 0 8px 0;
+    cursor: grab;
+    box-shadow: 0 4px 12px rgba(94,158,255,0.3);
+    transition: transform 0.1s;
+  }
+  .drag-link:hover { transform: translateY(-1px); }
+  .drag-link:active { cursor: grabbing; }
+  code {
+    background: var(--surface-hover);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'SF Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+  }
+  kbd {
+    background: var(--surface-hover);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-family: 'SF Mono', monospace;
+    font-size: 11px;
+  }
+  .warning {
+    background: rgba(255,160,80,0.08);
+    border: 1px solid rgba(255,160,80,0.25);
+    border-radius: 10px;
+    padding: 14px;
+    margin-top: 12px;
+    font-size: 13px;
+    color: #ffc89a;
+  }
+  ol { margin: 12px 0 0 24px; color: var(--text-muted); font-size: 14px; }
+  ol li { margin-bottom: 6px; }
+  .mode-tag {
+    display: inline-block;
+    background: rgba(255,200,80,0.15);
+    color: #ffd07a;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Installer le sync LinkedIn</h1>
+  <p class="subtitle">Un favori dans ta barre Chrome = 1 clic pour synchroniser tes connexions LinkedIn avec El Prospector.</p>
+
+  <div class="card">
+    <h2><span class="step-num">1</span>Affiche ta barre de favoris</h2>
+    <p>Si elle n'est pas visible, appuie <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd>.</p>
+  </div>
+
+  <div class="card">
+    <h2><span class="step-num">2</span>Drag-and-drop UN des boutons ci-dessous dans ta barre de favoris</h2>
+    <p style="margin-bottom: 12px">Choisis selon ton besoin. Glisse le bouton dans la barre.</p>
+
+    <div style="margin-bottom: 16px; padding: 14px; background: var(--surface-hover); border-radius: 10px; border: 1px solid var(--border)">
+      <div style="font-weight: 600; margin-bottom: 6px; font-size: 13px">Mode minimal <span class="mode-tag" style="background: rgba(94,158,255,0.15); color: var(--accent)">recommande</span></div>
+      <p style="font-size: 12px; margin-bottom: 10px">Aucun panel dans LinkedIn. Scrape + alert + copie dans presse-papier. Robuste, blinde contre CSP / interferences LinkedIn.</p>
+      <a id="minimal-link" class="drag-link" href="#" draggable="true">Sync LinkedIn (minimal)</a>
+    </div>
+
+    <details>
+      <summary style="cursor:pointer;color:var(--text-muted);font-size:13px;margin-bottom:8px">Mode explore (avec UI)</summary>
+      <div style="padding: 14px; background: var(--surface-hover); border-radius: 10px; border: 1px solid var(--border); margin-top: 8px">
+        <p style="font-size: 12px; margin-bottom: 10px">Affiche un panel dans LinkedIn avec les resultats. Plus joli mais peut planter si LinkedIn interfere avec l'injection HTML.</p>
+        <a id="explore-link" class="drag-link" href="#" draggable="true">Sync LinkedIn (explore) <span class="mode-tag">debug</span></a>
+      </div>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2><span class="step-num">3</span>Utilise-le sur LinkedIn</h2>
+    <ol>
+      <li>Va sur <code>linkedin.com/mynetwork/invite-connect/connections/</code></li>
+      <li>Clique le favori "Sync LinkedIn (explore)" dans ta barre</li>
+      <li>Laisse-le scroller tes connexions (10-30 sec selon la quantite)</li>
+      <li>Un panel apparait en haut a droite avec le resultat + un bouton "Copier JSON"</li>
+      <li>Copie et envoie-moi le JSON pour qu'on valide les selecteurs</li>
+    </ol>
+  </div>
+</div>
+
+<script>
+  // Wire up both bookmarklet links from the minified source files
+  const wire = (id, file) => {
+    fetch('/bookmarklets/' + file + '?t=' + Date.now())
+      .then(r => r.text())
+      .then(code => {
+        const url = 'javascript:' + encodeURIComponent(code) + 'void(0);';
+        document.getElementById(id).setAttribute('href', url);
+      })
+      .catch(err => {
+        document.getElementById(id).textContent = 'Erreur chargement';
+        console.error(err);
+      });
+  };
+  wire('minimal-link', 'linkedin-sync-minimal.min.js');
+  wire('explore-link', 'linkedin-sync-explore.min.js');
+</script>
+</body>
+</html>

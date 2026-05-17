@@ -10,15 +10,13 @@ import type { Agency, Conversation, Message } from '../lib/types'
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   pending: { label: 'En attente', color: 'text-gray-400', bg: 'bg-gray-500/20' },
   sent: { label: 'Envoyé', color: 'text-sky-400', bg: 'bg-sky-500/20' },
-  prospect_phase: { label: 'Prospect', color: 'text-blue-400', bg: 'bg-blue-500/20' },
-  revealed: { label: 'Révélé', color: 'text-purple-400', bg: 'bg-purple-500/20' },
-  report_sent: { label: 'Rapport envoyé', color: 'text-violet-400', bg: 'bg-violet-500/20' },
-  video_sent: { label: 'Vidéo envoyée', color: 'text-indigo-400', bg: 'bg-indigo-500/20' },
-  visio_accepted: { label: 'Visio OK', color: 'text-green-400', bg: 'bg-green-500/20' },
+  audit_requested: { label: 'Audit demandé', color: 'text-emerald-400', bg: 'bg-emerald-500/20' },
+  audit_sent: { label: 'Audit envoyé', color: 'text-blue-400', bg: 'bg-blue-500/20' },
+  audit_refused: { label: 'Audit refusé', color: 'text-red-400', bg: 'bg-red-500/20' },
+  autoresponder: { label: 'Autorépondeur', color: 'text-zinc-400', bg: 'bg-zinc-500/20' },
   no_answer: { label: 'Pas de réponse', color: 'text-yellow-400', bg: 'bg-yellow-500/20' },
   callback: { label: 'À rappeler', color: 'text-cyan-400', bg: 'bg-cyan-500/20' },
   closed: { label: 'Fermé', color: 'text-gray-400', bg: 'bg-gray-500/20' },
-  lost: { label: 'Perdu', color: 'text-red-400', bg: 'bg-red-500/20' },
   wrong_target: { label: 'Mauvaise cible', color: 'text-rose-400', bg: 'bg-rose-500/20' },
 }
 

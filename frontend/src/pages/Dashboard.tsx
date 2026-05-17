@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
-  Building2, Mail, Video, Clock, Users, Search, MessageSquare,
+  Building2, Mail, FileCheck, Clock, Users, Search, MessageSquare,
   TrendingUp, MapPin, Zap, Phone, ArrowRight, MailQuestion, RefreshCw,
   RotateCw, Target, CalendarClock,
 } from 'lucide-react'
@@ -23,7 +23,6 @@ type ConvRow = {
   agency_id: string
   status: string
   contact_method: string | null
-  visio_accepted: boolean
   first_response_at: string | null
   response_time_minutes: number | null
   nb_exchanges: number
@@ -72,15 +71,13 @@ type DashData = {
 
 const PIPELINE_STATUSES = [
   { key: 'sent', label: 'Envoyees', color: 'bg-sky-500' },
-  { key: 'prospect_phase', label: 'Prospect', color: 'bg-blue-500' },
-  { key: 'revealed', label: 'Revelees', color: 'bg-purple-500' },
-  { key: 'report_sent', label: 'Rapport', color: 'bg-violet-500' },
-  { key: 'video_sent', label: 'Video', color: 'bg-indigo-500' },
-  { key: 'visio_accepted', label: 'Visio OK', color: 'bg-green-500' },
+  { key: 'audit_requested', label: 'Audit demande', color: 'bg-emerald-500' },
+  { key: 'audit_sent', label: 'Audit envoye', color: 'bg-blue-500' },
+  { key: 'audit_refused', label: 'Audit refuse', color: 'bg-red-500' },
+  { key: 'autoresponder', label: 'Autoresponder', color: 'bg-zinc-500' },
   { key: 'no_answer', label: 'Pas de reponse', color: 'bg-yellow-500' },
   { key: 'callback', label: 'A rappeler', color: 'bg-cyan-500' },
   { key: 'closed', label: 'Fermees', color: 'bg-gray-500' },
-  { key: 'lost', label: 'Perdues', color: 'bg-red-500' },
   { key: 'wrong_target', label: 'Mauvaise cible', color: 'bg-rose-500' },
 ]
 
@@ -94,7 +91,7 @@ export default function Dashboard() {
     setLoading(true)
     const [agRes, convRes, msgRes, evtRes, scanTotalRes, scanDoneRes, unmatchRes, fuConfigRes, emailConfigRes] = await Promise.all([
       supabase.from('agencies').select('id, email, city, is_franchise, enrichment_status, website, phone, owner_name, rating'),
-      supabase.from('conversations').select('id, agency_id, status, contact_method, visio_accepted, first_response_at, response_time_minutes, nb_exchanges, sent_at, no_answer, follow_up_count, last_follow_up_at'),
+      supabase.from('conversations').select('id, agency_id, status, contact_method, first_response_at, response_time_minutes, nb_exchanges, sent_at, no_answer, follow_up_count, last_follow_up_at'),
       supabase.from('messages').select('id, conversation_id, direction, content, sent_at').order('sent_at', { ascending: false }).limit(10),
       supabase.from('conversation_events').select('conversation_id, from_status, to_status, changed_at').order('changed_at'),
       supabase.from('scan_zones').select('id', { count: 'exact', head: true }),
@@ -152,8 +149,8 @@ export default function Dashboard() {
   const hasSiteNoEmail = enriched.filter(a => a.website && !a.email)
 
   const replied = conversations.filter(c => c.first_response_at)
-  const visioCount = conversations.filter(c => c.visio_accepted).length
-  const lostCount = conversations.filter(c => c.status === 'lost').length
+  const auditRequestedCount = conversations.filter(c => c.status === 'audit_requested').length
+  const auditSentCount = conversations.filter(c => c.status === 'audit_sent').length
   const noAnswerCount = conversations.filter(c => c.no_answer).length
   const wrongTargetCount = conversations.filter(c => c.status === 'wrong_target').length
 
@@ -196,22 +193,19 @@ export default function Dashboard() {
     { label: 'Avec email', value: withEmail.length, color: 'bg-purple-500' },
     { label: 'Contactees', value: conversations.length, color: 'bg-indigo-500' },
     { label: 'Repondu', value: replied.length, color: 'bg-amber-500' },
-    { label: 'Visio', value: visioCount, color: 'bg-green-500' },
+    { label: 'Audit envoye', value: auditSentCount, color: 'bg-emerald-500' },
   ]
 
 
   // Phase performance from events
-  // Ordered pipeline phases
-  const PHASE_ORDER = ['sent', 'prospect_phase', 'revealed', 'report_sent', 'video_sent', 'visio_accepted']
+  // Ordered pipeline phases (nouvelle stratégie : sent → audit_requested → audit_sent)
+  const PHASE_ORDER = ['sent', 'audit_requested', 'audit_sent']
   const PHASE_LABELS: Record<string, string> = {
     sent: 'Envoyee',
-    prospect_phase: 'Prospect',
-    revealed: 'Revelee',
-    report_sent: 'Rapport envoye',
-    video_sent: 'Video envoyee',
-    visio_accepted: 'Visio acceptee',
+    audit_requested: 'Audit demande',
+    audit_sent: 'Audit envoye',
   }
-  const DROP_STATUSES = ['lost', 'no_answer', 'closed', 'wrong_target']
+  const DROP_STATUSES = ['audit_refused', 'autoresponder', 'no_answer', 'closed', 'wrong_target']
 
   // Group filtered events by conversation
   const eventsByConv = new Map<string, EventRow[]>()
@@ -288,7 +282,8 @@ export default function Dashboard() {
 
   // Eligible for follow-up (delay passed + not at max)
   const now = Date.now()
-  const ELIGIBLE_STATUSES = ['sent', 'prospect_phase', 'revealed', 'report_sent', 'video_sent']
+  // Pour l'instant la relance est désactivée → ELIGIBLE_STATUSES vide (la section reste affichée pour info)
+  const ELIGIBLE_STATUSES: string[] = []
   const eligibleForFollowUp = conversations.filter(c => {
     if (!ELIGIBLE_STATUSES.includes(c.status)) return false
     const cfg = fuConfigMap.get(c.status)
@@ -357,7 +352,7 @@ export default function Dashboard() {
         <KpiCard icon={<Building2 size={18} />} label="Franchises" value={franchises.length} sub={`${pctFranchise}%`} color="text-orange-400" />
         <KpiCard icon={<Mail size={18} />} label="Avec email" value={withEmail.length} sub={`${totalAgencies > 0 ? Math.round((withEmail.length / totalAgencies) * 100) : 0}%`} color="text-sky-400" />
         <KpiCard icon={<MessageSquare size={18} />} label="Conversations" value={conversations.length} />
-        <KpiCard icon={<Video size={18} />} label="Visios" value={visioCount} color="text-green-400" />
+        <KpiCard icon={<FileCheck size={18} />} label="Audits envoyes" value={auditSentCount} sub={auditRequestedCount > 0 ? `${auditRequestedCount} en attente` : undefined} color="text-emerald-400" />
       </div>
 
       {/* ── Section 2 : Funnel de conversion ── */}
@@ -933,10 +928,10 @@ export default function Dashboard() {
               status="A surveiller"
             />
             <AlertRow
-              label="Prospects perdus"
-              value={lostCount}
-              color={lostCount > 0 ? 'text-red-400' : 'text-[var(--text-muted)]'}
-              status={lostCount > 0 ? `${lostCount}` : '-'}
+              label="Audits refuses"
+              value={conversations.filter(c => c.status === 'audit_refused').length}
+              color="text-red-400"
+              status={`${conversations.filter(c => c.status === 'audit_refused').length}`}
             />
             <AlertRow
               label="Mauvaises cibles"

@@ -32,19 +32,18 @@ type ChannelTab = 'form' | 'email' | 'phone'
 const ALL_STATUSES = [
   { value: 'pending', label: 'En attente', cls: 'bg-gray-500/20 text-[var(--text-muted)]' },
   { value: 'sent', label: 'Email envoye', cls: 'bg-sky-500/20 text-sky-400' },
-  { value: 'prospect_phase', label: 'Phase prospect', cls: 'bg-blue-500/20 text-blue-400' },
-  { value: 'revealed', label: 'Revele', cls: 'bg-purple-500/20 text-purple-400' },
-  { value: 'report_sent', label: 'Rapport envoye', cls: 'bg-violet-500/20 text-violet-400' },
-  { value: 'video_sent', label: 'Video envoyee', cls: 'bg-indigo-500/20 text-indigo-400' },
-  { value: 'visio_accepted', label: 'Visio acceptee', cls: 'bg-green-500/20 text-green-400' },
+  { value: 'audit_requested', label: 'Audit demande', cls: 'bg-emerald-500/20 text-emerald-400' },
+  { value: 'audit_sent', label: 'Audit envoye', cls: 'bg-blue-500/20 text-blue-400' },
+  { value: 'audit_refused', label: 'Audit refuse', cls: 'bg-red-500/20 text-red-400' },
+  { value: 'autoresponder', label: 'Autorepondeur', cls: 'bg-zinc-500/20 text-zinc-400' },
   { value: 'no_answer', label: 'Pas de reponse', cls: 'bg-yellow-500/20 text-yellow-400' },
   { value: 'callback', label: 'A rappeler', cls: 'bg-blue-500/20 text-blue-400' },
   { value: 'closed', label: 'Ferme', cls: 'bg-gray-500/20 text-[var(--text-muted)]' },
-  { value: 'lost', label: 'Perdu', cls: 'bg-red-500/20 text-red-400' },
+  { value: 'wrong_target', label: 'Mauvaise cible', cls: 'bg-rose-500/20 text-rose-400' },
 ] as const
 
 // Statuses that require an email (prospect is in the email pipeline)
-const EMAIL_REQUIRED_STATUSES = ['pending', 'sent', 'prospect_phase', 'revealed', 'report_sent', 'video_sent', 'visio_accepted', 'closed']
+const EMAIL_REQUIRED_STATUSES = ['pending', 'sent', 'audit_requested', 'audit_sent', 'audit_refused', 'autoresponder', 'closed']
 
 const STATUS_MAP = Object.fromEntries(ALL_STATUSES.map(s => [s.value, s]))
 
