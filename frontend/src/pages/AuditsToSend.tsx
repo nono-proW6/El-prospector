@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   RefreshCw, FileCheck, MapPin, Mail, Phone, Send,
   CheckCircle2, Copy, ExternalLink, ChevronDown, ChevronUp,
-  XCircle, AlertTriangle, CalendarClock
+  XCircle, AlertTriangle, CalendarClock, User
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -70,6 +70,7 @@ type Row = {
   agency_name: string
   agency_city: string
   agency_email: string | null
+  owner_name: string | null
   manager_phone: string | null
   agency_phone: string | null
   last_inbound: string | null
@@ -116,7 +117,7 @@ export default function AuditsToSend() {
       .from('conversations')
       .select(`
         id, status, sender_email, created_at, agency_id,
-        agency:agencies!inner ( id, name, city, email, phone, manager_phone )
+        agency:agencies!inner ( id, name, city, email, phone, manager_phone, owner_name )
       `)
       .in('status', TAB_CONFIG[activeTab].statuses)
       .order('created_at', { ascending: false })
@@ -150,7 +151,7 @@ export default function AuditsToSend() {
       sender_email: string | null
       created_at: string
       agency_id: string
-      agency: { id: string; name: string; city: string; email: string | null; phone: string | null; manager_phone: string | null } | { id: string; name: string; city: string; email: string | null; phone: string | null; manager_phone: string | null }[]
+      agency: { id: string; name: string; city: string; email: string | null; phone: string | null; manager_phone: string | null; owner_name: string | null } | { id: string; name: string; city: string; email: string | null; phone: string | null; manager_phone: string | null; owner_name: string | null }[]
     }
 
     const mapped: Row[] = (convs as unknown as RawConv[]).map(c => {
@@ -165,6 +166,7 @@ export default function AuditsToSend() {
         agency_name: agency?.name || '',
         agency_city: agency?.city || '',
         agency_email: agency?.email || null,
+        owner_name: agency?.owner_name || null,
         manager_phone: agency?.manager_phone || null,
         agency_phone: agency?.phone || null,
         last_inbound: last?.content || null,
@@ -328,6 +330,22 @@ export default function AuditsToSend() {
 
                   {/* Meta */}
                   <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+                    {r.owner_name && (
+                      <button
+                        onClick={() => copy(r.owner_name!, `owner-${r.conversation_id}`)}
+                        className="group flex items-center gap-1.5 text-amber-400 hover:text-amber-300"
+                        title="Copier le nom du gérant"
+                      >
+                        <User size={12} /> Gérant : <strong>{r.owner_name}</strong>
+                        <Copy
+                          size={11}
+                          className={copiedKey === `owner-${r.conversation_id}` ? 'text-emerald-400' : 'opacity-40 group-hover:opacity-100 transition-opacity'}
+                        />
+                        {copiedKey === `owner-${r.conversation_id}` && (
+                          <span className="text-[10px] text-emerald-400">copié</span>
+                        )}
+                      </button>
+                    )}
                     {r.agency_email && (
                       <span className="flex items-center gap-1.5 text-[var(--text-muted)]">
                         <Mail size={12} /> {r.agency_email}
