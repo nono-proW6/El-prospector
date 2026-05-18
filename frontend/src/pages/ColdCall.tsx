@@ -6,7 +6,7 @@ import {
   CalendarClock, Trophy, Flame, Target, Loader2,
   ThumbsDown, PhoneMissed, PhoneOff, SkipForward,
   RotateCcw, ChevronDown, ChevronRight, Clock,
-  TrendingUp, Send, Linkedin, XCircle, Users,
+  TrendingUp, CheckCircle2, Send, Linkedin, XCircle, Users,
   FileCheck
 } from 'lucide-react'
 
