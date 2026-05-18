@@ -12,15 +12,21 @@ function defaultCallbackDate(): string {
   return d.toISOString().split('T')[0]
 }
 
-const DEFAULT_COVER_MESSAGE = `Bonjour,
+function coverMessage(ownerName: string | null): string {
+  const greeting = ownerName ? `Rebonjour ${ownerName}` : 'Rebonjour'
+  return `${greeting},
 
-Voici l'audit promis, en pièce jointe.
+Comme promis, voici l'audit de votre agence fait par mon agent IA (en pièce jointe), j'espère que vous apprécierez.
 
-Lecture en 8 minutes. Trois choses notables sur votre agence je vous laisse les découvrir.
-
-Je vous appelle dans 2-3 jours pour avoir votre retour à chaud.
+Je vous appelle dans 2-3 jours pour avoir votre retour !
 
 Noam`
+}
+
+function coverSubject(ownerName: string | null, agencyName: string): string {
+  if (ownerName) return `Pour ${ownerName} — audit ${agencyName}`
+  return `Audit ${agencyName}`
+}
 
 type Tab = 'audit_requested' | 'audit_sent' | 'audit_refused' | 'other'
 
@@ -383,7 +389,14 @@ export default function AuditsToSend() {
                     {showActions && (
                       <>
                         <button
-                          onClick={() => copy(DEFAULT_COVER_MESSAGE, `cover-${r.conversation_id}`)}
+                          onClick={() => copy(coverSubject(r.owner_name, r.agency_name), `subject-${r.conversation_id}`)}
+                          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-[var(--surface-hover)] hover:bg-[var(--border)] transition-colors"
+                        >
+                          <Copy size={12} />
+                          {copiedKey === `subject-${r.conversation_id}` ? 'Objet copié !' : 'Copier l\'objet'}
+                        </button>
+                        <button
+                          onClick={() => copy(coverMessage(r.owner_name), `cover-${r.conversation_id}`)}
                           className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-[var(--surface-hover)] hover:bg-[var(--border)] transition-colors"
                         >
                           <Copy size={12} />
