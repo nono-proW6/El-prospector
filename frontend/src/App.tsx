@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
-import { Building2, BarChart3, Map, PhoneCall, MailQuestion, Activity, ClipboardList, Headset, Linkedin, FileText, Target, FileCheck } from 'lucide-react'
+import { Building2, BarChart3, Map, PhoneCall, MailQuestion, Activity, ClipboardList, Headset, Linkedin, FileText, Target, FileCheck, CalendarClock } from 'lucide-react'
 import Agencies from './pages/Agencies'
 import Dashboard from './pages/Dashboard'
 import ScanMap from './pages/ScanMap'
@@ -12,6 +12,7 @@ import LinkedInPage from './pages/LinkedIn'
 import Reports from './pages/Reports'
 import Habits from './pages/Habits'
 import AuditsToSend from './pages/AuditsToSend'
+import AuditsToCallback from './pages/AuditsToCallback'
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
           <NavItem to="/scan-map" icon={<Map size={18} />} label="Carte scan" />
           <NavItem to="/cold-call" icon={<Headset size={18} />} label="Cold Call" />
           <NavItem to="/audits-to-send" icon={<FileCheck size={18} />} label="Réponses email" />
+          <NavItem to="/audits-to-callback" icon={<CalendarClock size={18} />} label="Rappels audit" />
           <NavItem to="/linkedin" icon={<Linkedin size={18} />} label="LinkedIn" />
           <NavItem to="/reports" icon={<FileText size={18} />} label="Rapports" />
           <NavItem to="/habits" icon={<Target size={18} />} label="Habitudes" />
@@ -41,6 +43,7 @@ function App() {
             <Route path="/scan-map" element={<ScanMap />} />
             <Route path="/cold-call" element={<ColdCall />} />
             <Route path="/audits-to-send" element={<AuditsToSend />} />
+            <Route path="/audits-to-callback" element={<AuditsToCallback />} />
             <Route path="/linkedin" element={<LinkedInPage />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/habits" element={<Habits />} />
@@ -58,9 +61,9 @@ function App() {
         >
           <div className="grid grid-cols-4">
             <BottomNavItem to="/cold-call" icon={<Headset size={22} />} label="Cold Call" />
+            <BottomNavItem to="/audits-to-callback" icon={<CalendarClock size={22} />} label="Rappels" />
             <BottomNavItem to="/linkedin" icon={<Linkedin size={22} />} label="LinkedIn" />
             <BottomNavItem to="/habits" icon={<Target size={22} />} label="Habits" />
-            <BottomNavItem to="/" icon={<BarChart3 size={22} />} label="Stats" />
           </div>
         </nav>
       </div>

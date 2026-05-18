@@ -2,9 +2,15 @@ import { useEffect, useState } from 'react'
 import {
   RefreshCw, FileCheck, MapPin, Mail, Phone, Send,
   CheckCircle2, Copy, ExternalLink, ChevronDown, ChevronUp,
-  XCircle, AlertTriangle
+  XCircle, AlertTriangle, CalendarClock
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+
+function defaultCallbackDate(): string {
+  const d = new Date()
+  d.setDate(d.getDate() + 2)
+  return d.toISOString().split('T')[0]
+}
 
 const DEFAULT_COVER_MESSAGE = `Bonjour,
 
@@ -77,6 +83,7 @@ export default function AuditsToSend() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [marking, setMarking] = useState<string | null>(null)
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
+  const [sendModal, setSendModal] = useState<{ conversation_id: string; agency_id: string; callback_date: string } | null>(null)
   const [counts, setCounts] = useState<Record<Tab, number>>({
     audit_requested: 0, audit_sent: 0, audit_refused: 0, other: 0,
   })
@@ -191,14 +198,20 @@ export default function AuditsToSend() {
     if (url) window.open(url, '_blank', 'noopener,noreferrer')
   }
 
-  async function markAsSent(conversationId: string) {
-    setMarking(conversationId)
-    await supabase
-      .from('conversations')
-      .update({ status: 'audit_sent' })
-      .eq('id', conversationId)
+  function openSendModal(conversationId: string, agencyId: string) {
+    setSendModal({ conversation_id: conversationId, agency_id: agencyId, callback_date: defaultCallbackDate() })
+  }
+
+  async function confirmSent() {
+    if (!sendModal) return
+    setMarking(sendModal.conversation_id)
+    await Promise.all([
+      supabase.from('conversations').update({ status: 'audit_sent' }).eq('id', sendModal.conversation_id),
+      supabase.from('agencies').update({ audit_callback_date: sendModal.callback_date }).eq('id', sendModal.agency_id),
+    ])
     setMarking(null)
-    setRows(prev => prev.filter(r => r.conversation_id !== conversationId))
+    setRows(prev => prev.filter(r => r.conversation_id !== sendModal.conversation_id))
+    setSendModal(null)
     loadCounts()
   }
 
@@ -359,7 +372,7 @@ export default function AuditsToSend() {
                           {copiedKey === `cover-${r.conversation_id}` ? 'Copié !' : 'Copier le message'}
                         </button>
                         <button
-                          onClick={() => markAsSent(r.conversation_id)}
+                          onClick={() => openSendModal(r.conversation_id, r.agency_id)}
                           disabled={marking === r.conversation_id}
                           className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors disabled:opacity-40 ml-auto"
                         >
@@ -390,6 +403,35 @@ export default function AuditsToSend() {
           })
         )}
       </div>
+
+      {sendModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setSendModal(null)}>
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 w-80" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-2 mb-1">
+              <CalendarClock size={16} className="text-blue-400" />
+              <h3 className="font-bold">Date de rappel</h3>
+            </div>
+            <p className="text-xs text-[var(--text-muted)] mb-4">Quand rappeler après l'envoi de l'audit ?</p>
+            <input
+              type="date"
+              value={sendModal.callback_date}
+              onChange={e => setSendModal(s => s ? { ...s, callback_date: e.target.value } : s)}
+              className="w-full px-4 py-2.5 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] mb-4 focus:outline-none focus:border-[var(--accent)]"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => setSendModal(null)}
+                className="flex-1 py-2.5 rounded-xl border border-[var(--border)] text-sm text-[var(--text-muted)] hover:bg-[var(--surface-hover)]"
+              >Annuler</button>
+              <button
+                onClick={confirmSent}
+                disabled={!sendModal.callback_date || marking === sendModal.conversation_id}
+                className="flex-1 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600 disabled:opacity-40"
+              >{marking === sendModal.conversation_id ? '...' : 'Marquer envoyé'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

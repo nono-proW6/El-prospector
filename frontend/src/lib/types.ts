@@ -30,6 +30,7 @@ export interface Agency {
   call_result: string | null
   call_date: string | null
   callback_date: string | null
+  audit_callback_date: string | null
   call_notes: string | null
   linkedin_status: string | null
   linkedin_connect_date: string | null

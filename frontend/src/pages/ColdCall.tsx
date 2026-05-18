@@ -6,7 +6,7 @@ import {
   CalendarClock, Trophy, Flame, Target, Loader2,
   ThumbsDown, PhoneMissed, PhoneOff, SkipForward,
   RotateCcw, ChevronDown, ChevronRight, Clock,
-  TrendingUp, CheckCircle2, Send, Linkedin, XCircle, Users,
+  TrendingUp, Send, Linkedin, XCircle, Users,
   FileCheck
 } from 'lucide-react'
 
@@ -18,23 +18,12 @@ function formatDateTime(iso: string | null): string {
     + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 }
 
-function auditSentRelative(iso: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime()
-  const diffH = Math.floor(diffMs / (1000 * 60 * 60))
-  const diffD = Math.floor(diffH / 24)
-  if (diffH < 1) return "à l'instant"
-  if (diffH < 24) return `il y a ${diffH}h`
-  if (diffD === 1) return 'hier'
-  if (diffD < 7) return `il y a ${diffD}j`
-  const d = new Date(iso)
-  return `le ${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`
-}
-
-type CallResult = 'rdv' | 'rappeler' | 'pas_décroché' | 'pas_intéressé' | 'mauvais_numéro'
+type CallResult = 'rdv' | 'rappeler' | 'audit_a_envoyer' | 'pas_décroché' | 'pas_intéressé' | 'mauvais_numéro'
 
 const RESULTS: { key: CallResult; label: string; icon: React.ReactNode; badgeClass: string }[] = [
   { key: 'rdv',             label: 'RDV obtenu',     icon: <Trophy size={18} />,       badgeClass: 'bg-emerald-500/15 text-emerald-400' },
   { key: 'rappeler',        label: 'Rappeler',       icon: <CalendarClock size={18} />, badgeClass: 'bg-blue-500/15 text-blue-400' },
+  { key: 'audit_a_envoyer', label: 'Audit à envoyer', icon: <FileCheck size={18} />,   badgeClass: 'bg-purple-500/15 text-purple-400' },
   { key: 'pas_décroché',    label: 'Pas décroché',   icon: <PhoneMissed size={18} />,   badgeClass: 'bg-zinc-500/15 text-zinc-400' },
   { key: 'pas_intéressé',   label: 'Pas intéressé',  icon: <ThumbsDown size={18} />,    badgeClass: 'bg-red-500/15 text-red-400' },
   { key: 'mauvais_numéro',  label: 'Mauvais n°',     icon: <PhoneOff size={18} />,      badgeClass: 'bg-zinc-500/15 text-zinc-500' },
@@ -70,8 +59,7 @@ export default function ColdCall() {
   const [callNotes, setCallNotes] = useState('')
   const [transitioning, setTransitioning] = useState(false)
 
-  // Tiered pools: audit reçu → callbacks due today → accepted LinkedIn → sent → rest → 24h retry (pas_décroché) → skipped (last chance)
-  const auditSentPoolRef = useRef<string[]>([])
+  // Tiered pools: callbacks due today → accepted LinkedIn → sent → rest → 24h retry (pas_décroché) → skipped (last chance)
   const callbackPoolRef = useRef<string[]>([])
   const acceptedPoolRef = useRef<string[]>([])
   const sentPoolRef = useRef<string[]>([])
@@ -79,7 +67,7 @@ export default function ColdCall() {
   const retryPoolRef = useRef<string[]>([])
   const skippedPoolRef = useRef<string[]>([])
   const usedRef = useRef<Set<string>>(new Set())
-  const [currentTier, setCurrentTier] = useState<'audit_sent' | 'callback' | 'accepted' | 'sent' | 'rest' | 'retry' | 'skipped' | null>(null)
+  const [currentTier, setCurrentTier] = useState<'callback' | 'accepted' | 'sent' | 'rest' | 'retry' | 'skipped' | null>(null)
 
   const [todayCalls, setTodayCalls] = useState(0)
   const [todayDecroches, setTodayDecroches] = useState(0)
@@ -93,12 +81,8 @@ export default function ColdCall() {
   const [acceptedCount, setAcceptedCount] = useState(0)
   const [sentCount, setSentCount] = useState(0)
   const [skippedCount, setSkippedCount] = useState(0)
-  const [auditSentCount, setAuditSentCount] = useState(0)
 
   const motRef = useRef(MOTIVATIONS[0])
-
-  type AuditMessage = { direction: 'inbound' | 'outbound'; content: string; sent_at: string }
-  const [auditContext, setAuditContext] = useState<{ audit_sent_at: string | null; messages: AuditMessage[] } | null>(null)
 
   // Pré-remplit notes/date quand on recontacte (callback ou retry)
   useEffect(() => {
@@ -107,45 +91,6 @@ export default function ColdCall() {
       setCallNotes(currentAgency.call_notes || '')
       if (currentAgency.callback_date) setCallbackDate(currentAgency.callback_date)
     }
-  }, [currentAgency, currentTier])
-
-  // Charge le contexte audit (date d'envoi + historique messages) quand on est sur un prospect audit_sent
-  useEffect(() => {
-    if (!currentAgency || currentTier !== 'audit_sent') {
-      setAuditContext(null)
-      return
-    }
-    let cancelled = false
-    ;(async () => {
-      const { data: conv } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('agency_id', currentAgency.id)
-        .eq('status', 'audit_sent')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      if (!conv || cancelled) return
-      const [eventsRes, msgsRes] = await Promise.all([
-        supabase.from('conversation_events')
-          .select('to_status, changed_at')
-          .eq('conversation_id', conv.id)
-          .eq('to_status', 'audit_sent')
-          .order('changed_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        supabase.from('messages')
-          .select('direction, content, sent_at')
-          .eq('conversation_id', conv.id)
-          .order('sent_at', { ascending: true }),
-      ])
-      if (cancelled) return
-      setAuditContext({
-        audit_sent_at: eventsRes.data?.changed_at || null,
-        messages: (msgsRes.data || []) as AuditMessage[],
-      })
-    })()
-    return () => { cancelled = true }
   }, [currentAgency, currentTier])
 
   // ─── Data loading ─────────────────────────────────────
@@ -179,13 +124,6 @@ export default function ColdCall() {
       .eq('call_result', 'rappeler').lte('callback_date', today)
       .is('call_skipped_at', null)
 
-    // Agencies en audit_sent : on requête conversations d'abord pour avoir les agency_ids
-    const { data: auditConvs } = await supabase
-      .from('conversations')
-      .select('agency_id')
-      .eq('status', 'audit_sent')
-    const auditAgencyIds = (auditConvs || []).map(c => c.agency_id)
-
     const [total, accepted, sent, skipped, callback] = await Promise.all([
       base(),
       base().eq('linkedin_status', 'accepted').is('call_skipped_at', null),
@@ -194,21 +132,10 @@ export default function ColdCall() {
       callbackDue,
     ])
 
-    let auditCount = 0
-    if (auditAgencyIds.length) {
-      const { count } = await supabase.from('agencies').select('id', { count: 'exact', head: true })
-        .in('id', auditAgencyIds)
-        .is('call_result', null)
-        .is('call_skipped_at', null)
-        .eq('is_franchise', false)
-      auditCount = count || 0
-    }
-
-    setAvailableCount((total.count || 0) + (callback.count || 0) + auditCount)
+    setAvailableCount((total.count || 0) + (callback.count || 0))
     setAcceptedCount(accepted.count || 0)
     setSentCount(sent.count || 0)
     setSkippedCount(skipped.count || 0)
-    setAuditSentCount(auditCount)
   }
 
   async function loadCalled() {
@@ -246,7 +173,7 @@ export default function ColdCall() {
   // 'callback' allows call_result='rappeler'; 'retry' allows 'pas_décroché'; others require null
   async function drainPool(
     pool: React.MutableRefObject<string[]>,
-    tier: 'audit_sent' | 'callback' | 'accepted' | 'sent' | 'rest' | 'retry' | 'skipped',
+    tier: 'callback' | 'accepted' | 'sent' | 'rest' | 'retry' | 'skipped',
   ): Promise<Agency | null> {
     while (pool.current.length > 0) {
       const id = pool.current.shift()!
@@ -266,9 +193,8 @@ export default function ColdCall() {
   }
 
   async function fetchNext(): Promise<Agency | null> {
-    // Priority: audit reçu → callbacks due → accepted → sent → rest → 24h retry → skipped (last resort)
-    return (await drainPool(auditSentPoolRef, 'audit_sent'))
-      || (await drainPool(callbackPoolRef, 'callback'))
+    // Priority: callbacks due → accepted → sent → rest → 24h retry → skipped (last resort)
+    return (await drainPool(callbackPoolRef, 'callback'))
       || (await drainPool(acceptedPoolRef, 'accepted'))
       || (await drainPool(sentPoolRef, 'sent'))
       || (await drainPool(restPoolRef, 'rest'))
@@ -308,32 +234,14 @@ export default function ColdCall() {
       .is('call_skipped_at', null)
       .order('call_date', { ascending: true })
 
-    // Audit reçu : agence_id depuis conversations.status='audit_sent', puis filtrer agencies éligibles
-    const { data: auditConvs } = await supabase
-      .from('conversations')
-      .select('agency_id')
-      .eq('status', 'audit_sent')
-    const auditAgencyIds = (auditConvs || []).map(c => c.agency_id)
-
-    const [callback, accepted, sent, rest, retryData, skippedData, auditData] = await Promise.all([
+    const [callback, accepted, sent, rest, retryData, skippedData] = await Promise.all([
       callbacks().limit(100),
       unskipped().eq('linkedin_status', 'accepted').limit(100),
       unskipped().eq('linkedin_status', 'sent').limit(100),
       unskipped().is('linkedin_status', null).limit(200),
       retry().limit(200),
       skipped().limit(200),
-      auditAgencyIds.length
-        ? supabase.from('agencies').select('id, score')
-            .in('id', auditAgencyIds)
-            .eq('is_franchise', false)
-            .is('call_result', null)
-            .is('call_skipped_at', null)
-            .order('score', { ascending: false, nullsFirst: false })
-            .order('user_ratings_total', { ascending: false, nullsFirst: false })
-            .limit(200)
-        : Promise.resolve({ data: [] as { id: string }[] }),
     ])
-    auditSentPoolRef.current = (auditData.data || []).map(d => d.id)
     callbackPoolRef.current = (callback.data || []).map(d => d.id)
     acceptedPoolRef.current = (accepted.data || []).map(d => d.id)
     sentPoolRef.current = (sent.data || []).map(d => d.id)
@@ -344,7 +252,6 @@ export default function ColdCall() {
 
   async function startSession() {
     setLoading(true)
-    auditSentPoolRef.current = []
     callbackPoolRef.current = []; acceptedPoolRef.current = []; sentPoolRef.current = []
     restPoolRef.current = []; retryPoolRef.current = []; skippedPoolRef.current = []
     usedRef.current = new Set()
@@ -364,10 +271,31 @@ export default function ColdCall() {
       callback_date: result === 'rappeler' && callbackDate ? callbackDate : null,
       call_skipped_at: null,
     }).eq('id', currentAgency.id)
+
+    if (result === 'audit_a_envoyer') {
+      // Crée ou MAJ une conversation pour qu'elle apparaisse dans /audits-to-send
+      const { data: existing } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('agency_id', currentAgency.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (existing) {
+        await supabase.from('conversations').update({ status: 'audit_requested' }).eq('id', existing.id)
+      } else {
+        await supabase.from('conversations').insert({
+          agency_id: currentAgency.id,
+          status: 'audit_requested',
+          contact_method: 'cold_call',
+        })
+      }
+    }
+
     setTodayCalls(c => c + 1)
     if (result !== 'pas_décroché' && result !== 'mauvais_numéro') setTodayDecroches(d => d + 1)
     if (result === 'rdv') setTodayRdv(r => r + 1)
-    if (result === 'rdv' || result === 'rappeler') setStreak(s => s + 1)
+    if (result === 'rdv' || result === 'rappeler' || result === 'audit_a_envoyer') setStreak(s => s + 1)
     else if (result !== 'pas_décroché') setStreak(0)
     setCompleted(c => c + 1)
     advance()
@@ -480,48 +408,6 @@ export default function ColdCall() {
                 className="flex items-center gap-1 hover:opacity-75">
                 <Linkedin size={12} /> Profil
               </a>
-            )}
-          </div>
-        )}
-
-        {currentTier === 'audit_sent' && (
-          <div className="mb-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 overflow-hidden">
-            <div className="flex items-center gap-2 px-3 py-2 text-emerald-400 text-xs font-medium border-b border-emerald-500/20">
-              <FileCheck size={14} />
-              A reçu un audit — prospect chaud
-              {auditContext?.audit_sent_at && (
-                <span className="ml-auto text-[10px] font-normal opacity-80">
-                  Envoyé {auditSentRelative(auditContext.audit_sent_at)}
-                </span>
-              )}
-            </div>
-            {auditContext && auditContext.messages.length > 0 && (
-              <div className="max-h-[200px] overflow-y-auto px-3 py-2 space-y-2 text-[11px] bg-emerald-500/5">
-                {auditContext.messages.map((m, i) => {
-                  const isOut = m.direction === 'outbound'
-                  const isPostAudit = auditContext.audit_sent_at
-                    ? new Date(m.sent_at).getTime() > new Date(auditContext.audit_sent_at).getTime()
-                    : false
-                  return (
-                    <div key={i} className={`flex gap-2 ${isOut ? 'justify-end' : ''}`}>
-                      <div className={`max-w-[85%] rounded-md px-2 py-1.5 ${
-                        isOut
-                          ? 'bg-emerald-500/15 text-emerald-300'
-                          : isPostAudit
-                            ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-                            : 'bg-zinc-500/15 text-zinc-300'
-                      }`}>
-                        <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-wider opacity-70 mb-0.5">
-                          {isOut ? 'Nous' : 'Agence'}
-                          {isPostAudit && !isOut && <span className="text-amber-400 font-bold">POST-AUDIT</span>}
-                          <span className="opacity-60">· {new Date(m.sent_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} {new Date(m.sent_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
-                        <div className="whitespace-pre-wrap leading-snug">{m.content}</div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
             )}
           </div>
         )}
@@ -693,9 +579,6 @@ export default function ColdCall() {
           <h1 className="text-xl font-bold">Cold Call</h1>
           <p className="text-sm text-[var(--text-muted)] mt-1">
             {availableCount} disponibles
-            {auditSentCount > 0 && (
-              <> · <span className="text-emerald-400 font-semibold">{auditSentCount}</span> audit reçu 🎯</>
-            )}
             {acceptedCount > 0 && (
               <> · <span className="text-emerald-400 font-semibold">{acceptedCount}</span> acceptés LinkedIn</>
             )}
