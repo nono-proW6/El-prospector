@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import {
   RefreshCw, PhoneCall, MapPin, Mail, Phone, FileCheck, CalendarClock,
-  Trophy, ThumbsDown, PhoneMissed, ChevronDown, ChevronUp, Copy, ExternalLink
+  Trophy, ThumbsDown, PhoneMissed, ChevronDown, ChevronUp, Copy, ExternalLink,
+  StickyNote, Pencil, Check, X
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -17,6 +18,7 @@ type Row = {
   sender_email: string | null
   last_message: string | null
   last_message_at: string | null
+  call_notes: string | null
 }
 
 type Filter = 'due' | 'upcoming' | 'all'
@@ -45,6 +47,9 @@ export default function AuditsToCallback() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
   const [recallModal, setRecallModal] = useState<{ agency_id: string; date: string } | null>(null)
   const [counts, setCounts] = useState<{ due: number; upcoming: number; all: number }>({ due: 0, upcoming: 0, all: 0 })
+  const [editingNotesId, setEditingNotesId] = useState<string | null>(null)
+  const [editingNotesValue, setEditingNotesValue] = useState('')
+  const [savingNotes, setSavingNotes] = useState(false)
 
   useEffect(() => { load() }, [filter])
 
@@ -56,7 +61,7 @@ export default function AuditsToCallback() {
       .from('conversations')
       .select(`
         id, sender_email, agency_id,
-        agency:agencies!inner ( id, name, city, email, phone, manager_phone, audit_callback_date )
+        agency:agencies!inner ( id, name, city, email, phone, manager_phone, audit_callback_date, call_notes )
       `)
       .eq('status', 'audit_sent')
 
@@ -67,8 +72,8 @@ export default function AuditsToCallback() {
       id: string
       sender_email: string | null
       agency_id: string
-      agency: { id: string; name: string; city: string; email: string | null; phone: string | null; manager_phone: string | null; audit_callback_date: string | null }
-        | { id: string; name: string; city: string; email: string | null; phone: string | null; manager_phone: string | null; audit_callback_date: string | null }[]
+      agency: { id: string; name: string; city: string; email: string | null; phone: string | null; manager_phone: string | null; audit_callback_date: string | null; call_notes: string | null }
+        | { id: string; name: string; city: string; email: string | null; phone: string | null; manager_phone: string | null; audit_callback_date: string | null; call_notes: string | null }[]
     }
 
     let mapped: Row[] = (convs as unknown as RawConv[]).map(c => {
@@ -85,6 +90,7 @@ export default function AuditsToCallback() {
         sender_email: c.sender_email,
         last_message: null,
         last_message_at: null,
+        call_notes: agency?.call_notes || null,
       }
     })
 
@@ -160,6 +166,20 @@ export default function AuditsToCallback() {
     setActing(null)
     setRows(prev => prev.filter(r => r.conversation_id !== row.conversation_id))
     setCounts(c => ({ ...c, [filter]: Math.max(0, c[filter] - 1), all: Math.max(0, c.all - 1) }))
+  }
+
+  function startEditNotes(row: Row) {
+    setEditingNotesId(row.conversation_id)
+    setEditingNotesValue(row.call_notes || '')
+  }
+
+  async function saveNotes(row: Row) {
+    setSavingNotes(true)
+    const newNotes = editingNotesValue.trim() || null
+    await supabase.from('agencies').update({ call_notes: newNotes }).eq('id', row.agency_id)
+    setRows(prev => prev.map(r => r.conversation_id === row.conversation_id ? { ...r, call_notes: newNotes } : r))
+    setSavingNotes(false)
+    setEditingNotesId(null)
   }
 
   function openRecall(agencyId: string, currentDate: string | null) {
@@ -293,6 +313,54 @@ export default function AuditsToCallback() {
                       </a>
                     )}
                   </div>
+
+                  {editingNotesId === r.conversation_id ? (
+                    <div className="flex flex-col gap-2 bg-[var(--bg)] border border-[var(--border)] rounded-lg p-2">
+                      <textarea
+                        autoFocus
+                        value={editingNotesValue}
+                        onChange={e => setEditingNotesValue(e.target.value)}
+                        rows={3}
+                        placeholder="Numéro perso, nom de contact, contexte du rappel..."
+                        className="w-full bg-transparent text-xs text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none resize-none"
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={() => setEditingNotesId(null)}
+                          disabled={savingNotes}
+                          className="flex items-center gap-1 text-xs px-2 py-1 rounded text-[var(--text-muted)] hover:bg-[var(--surface-hover)] disabled:opacity-40"
+                        >
+                          <X size={12} /> Annuler
+                        </button>
+                        <button
+                          onClick={() => saveNotes(r)}
+                          disabled={savingNotes}
+                          className="flex items-center gap-1 text-xs px-2 py-1 rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 disabled:opacity-40"
+                        >
+                          <Check size={12} /> Enregistrer
+                        </button>
+                      </div>
+                    </div>
+                  ) : r.call_notes ? (
+                    <div className="flex items-start gap-2 bg-amber-500/5 border border-amber-500/20 rounded-lg px-2.5 py-2 group">
+                      <StickyNote size={12} className="text-amber-400 mt-0.5 shrink-0" />
+                      <p className="flex-1 text-xs text-amber-100/90 whitespace-pre-wrap break-words leading-relaxed">{r.call_notes}</p>
+                      <button
+                        onClick={() => startEditNotes(r)}
+                        className="text-amber-400/60 hover:text-amber-400 transition-colors shrink-0 opacity-0 group-hover:opacity-100"
+                        title="Éditer la note"
+                      >
+                        <Pencil size={12} />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => startEditNotes(r)}
+                      className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-amber-400 transition-colors self-start"
+                    >
+                      <StickyNote size={11} /> Ajouter une note
+                    </button>
+                  )}
 
                   <div className="flex flex-wrap gap-2 mt-1">
                     <button
