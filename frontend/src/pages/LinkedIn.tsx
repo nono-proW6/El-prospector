@@ -28,11 +28,12 @@ function buildConnectMessage(ownerName: string | null, city: string | null): str
   return `${greeting}\n\nJ'analyse la réactivité des agences immobilières sur ${place} dans le cadre d'un projet IA, j'ai les résultats de votre agence si ça vous intéresse.`
 }
 
-function buildDmMessage(ownerName: string | null, city: string | null): string {
+function buildDmMessage(ownerName: string | null, city: string | null, agencyName: string | null): string {
   const first = firstName(ownerName)
   const greeting = first ? `Bonjour ${first},` : 'Bonjour,'
-  const placeBit = city ? ` à ${city}` : ''
-  return `${greeting}\n\nJe teste un agent IA qui audite les agences immo à partir des données publiques du web. Il sort un PDF de votre situation comparée à celle de vos concurrents${placeBit}.\n\nJe peux le faire tourner sur la vôtre gratuitement.\nDites-moi si vous voulez vos résultats !\n\nNoam`
+  const agencyBit = agencyName ? `J'ai vu que vous gérez ${agencyName}` : `J'ai vu votre agence`
+  const placeBit = city ? ` sur ${city}` : ''
+  return `${greeting}\n\n${agencyBit}\n\nJe peux vous envoyer une analyse PDF de votre agence comparée à vos concurrents directs${placeBit}.\n\nJe teste un agent IA que j'ai branché sur les données publiques du gouvernement.\n\nDites-moi simplement oui et je demande à mon agent IA de vous faire ça.\n\nNoam`
 }
 
 type LiStatus = 'sent' | 'accepted' | 'ignored'
@@ -403,7 +404,7 @@ export default function LinkedInPage() {
       const next = await drainDmPool()
       if (next) {
         setCurrentAgency(next)
-        setDmMessage(buildDmMessage(next.owner_name, next.city))
+        setDmMessage(buildDmMessage(next.owner_name, next.city, next.name))
         setInSession(true)
       }
     } else {
@@ -454,7 +455,7 @@ export default function LinkedInPage() {
       const n = mode === 'dm' ? await drainDmPool() : await fetchNext()
       if (n) {
         setCurrentAgency(n)
-        if (mode === 'dm') setDmMessage(buildDmMessage(n.owner_name, n.city))
+        if (mode === 'dm') setDmMessage(buildDmMessage(n.owner_name, n.city, n.name))
         else setConnectMessage(buildConnectMessage(n.owner_name, n.city))
       }
       else { setInSession(false); setCurrentAgency(null) }
