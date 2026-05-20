@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   RefreshCw, PhoneCall, MapPin, Mail, Phone, FileCheck, CalendarClock,
   Trophy, ThumbsDown, PhoneMissed, ChevronDown, ChevronUp, Copy, ExternalLink,
-  StickyNote, Pencil, Check, X
+  StickyNote, Pencil, Check, X, User
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -11,6 +11,7 @@ type Row = {
   agency_id: string
   agency_name: string
   agency_city: string
+  owner_name: string | null
   agency_email: string | null
   manager_phone: string | null
   agency_phone: string | null
@@ -61,7 +62,7 @@ export default function AuditsToCallback() {
       .from('conversations')
       .select(`
         id, sender_email, agency_id,
-        agency:agencies!inner ( id, name, city, email, phone, manager_phone, audit_callback_date, call_notes )
+        agency:agencies!inner ( id, name, city, email, phone, manager_phone, owner_name, audit_callback_date, call_notes )
       `)
       .eq('status', 'audit_sent')
 
@@ -72,7 +73,7 @@ export default function AuditsToCallback() {
       id: string
       sender_email: string | null
       agency_id: string
-      agency: { id: string; name: string; city: string; email: string | null; phone: string | null; manager_phone: string | null; audit_callback_date: string | null; call_notes: string | null }
+      agency: { id: string; name: string; city: string; email: string | null; phone: string | null; manager_phone: string | null; owner_name: string | null; audit_callback_date: string | null; call_notes: string | null }
         | { id: string; name: string; city: string; email: string | null; phone: string | null; manager_phone: string | null; audit_callback_date: string | null; call_notes: string | null }[]
     }
 
@@ -83,6 +84,7 @@ export default function AuditsToCallback() {
         agency_id: c.agency_id,
         agency_name: agency?.name || '',
         agency_city: agency?.city || '',
+        owner_name: agency?.owner_name || null,
         agency_email: agency?.email || null,
         manager_phone: agency?.manager_phone || null,
         agency_phone: agency?.phone || null,
@@ -301,6 +303,19 @@ export default function AuditsToCallback() {
                   </div>
 
                   <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+                    {r.owner_name && (
+                      <button
+                        onClick={() => copy(r.owner_name!, `owner-${r.conversation_id}`)}
+                        className="group flex items-center gap-1.5 text-amber-400 hover:text-amber-300"
+                        title="Copier le nom du gérant"
+                      >
+                        <User size={12} /> Gérant : <strong>{r.owner_name}</strong>
+                        <Copy
+                          size={11}
+                          className={copiedKey === `owner-${r.conversation_id}` ? 'text-emerald-400' : 'opacity-40 group-hover:opacity-100 transition-opacity'}
+                        />
+                      </button>
+                    )}
                     {r.agency_email && (
                       <span className="flex items-center gap-1.5 text-[var(--text-muted)]">
                         <Mail size={12} /> {r.agency_email}
