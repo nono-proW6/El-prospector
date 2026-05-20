@@ -74,7 +74,7 @@ export default function AuditsToCallback() {
       sender_email: string | null
       agency_id: string
       agency: { id: string; name: string; city: string; email: string | null; phone: string | null; manager_phone: string | null; owner_name: string | null; audit_callback_date: string | null; call_notes: string | null }
-        | { id: string; name: string; city: string; email: string | null; phone: string | null; manager_phone: string | null; audit_callback_date: string | null; call_notes: string | null }[]
+        | { id: string; name: string; city: string; email: string | null; phone: string | null; manager_phone: string | null; owner_name: string | null; audit_callback_date: string | null; call_notes: string | null }[]
     }
 
     let mapped: Row[] = (convs as unknown as RawConv[]).map(c => {
