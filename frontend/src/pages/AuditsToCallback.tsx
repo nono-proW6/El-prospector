@@ -47,6 +47,7 @@ export default function AuditsToCallback() {
   const [acting, setActing] = useState<string | null>(null)
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
   const [recallModal, setRecallModal] = useState<{ agency_id: string; date: string } | null>(null)
+  const [rdvModal, setRdvModal] = useState<{ row: Row; rdv_at: string } | null>(null)
   const [counts, setCounts] = useState<{ due: number; upcoming: number; all: number }>({ due: 0, upcoming: 0, all: 0 })
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null)
   const [editingNotesValue, setEditingNotesValue] = useState('')
@@ -149,17 +150,19 @@ export default function AuditsToCallback() {
     setTimeout(() => setCopiedKey(prev => (prev === key ? null : prev)), 2000)
   }
 
-  async function setOutcome(row: Row, outcome: 'rdv' | 'pas_intéressé' | 'pas_décroché' | 'audit_refused') {
+  async function setOutcome(row: Row, outcome: 'rdv' | 'pas_intéressé' | 'pas_décroché' | 'audit_refused', rdvAt?: string) {
     setActing(row.conversation_id)
     if (outcome === 'audit_refused') {
       await supabase.from('conversations').update({ status: 'audit_refused' }).eq('id', row.conversation_id)
     } else {
+      const agencyUpdate: Record<string, unknown> = {
+        call_result: outcome,
+        call_date: new Date().toISOString(),
+        audit_callback_date: null,
+      }
+      if (outcome === 'rdv' && rdvAt) agencyUpdate.rdv_at = new Date(rdvAt).toISOString()
       await Promise.all([
-        supabase.from('agencies').update({
-          call_result: outcome,
-          call_date: new Date().toISOString(),
-          audit_callback_date: null,
-        }).eq('id', row.agency_id),
+        supabase.from('agencies').update(agencyUpdate).eq('id', row.agency_id),
         outcome === 'rdv'
           ? supabase.from('conversations').update({ status: 'closed' }).eq('id', row.conversation_id)
           : Promise.resolve(),
@@ -168,6 +171,20 @@ export default function AuditsToCallback() {
     setActing(null)
     setRows(prev => prev.filter(r => r.conversation_id !== row.conversation_id))
     setCounts(c => ({ ...c, [filter]: Math.max(0, c[filter] - 1), all: Math.max(0, c.all - 1) }))
+  }
+
+  function openRdv(row: Row) {
+    const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(11, 0, 0, 0)
+    const off = d.getTimezoneOffset()
+    const local = new Date(d.getTime() - off * 60000)
+    setRdvModal({ row, rdv_at: local.toISOString().slice(0, 16) })
+  }
+
+  async function confirmRdv() {
+    if (!rdvModal || !rdvModal.rdv_at) return
+    const { row, rdv_at } = rdvModal
+    setRdvModal(null)
+    await setOutcome(row, 'rdv', rdv_at)
   }
 
   function startEditNotes(row: Row) {
@@ -379,7 +396,7 @@ export default function AuditsToCallback() {
 
                   <div className="flex flex-wrap gap-2 mt-1">
                     <button
-                      onClick={() => setOutcome(r, 'rdv')}
+                      onClick={() => openRdv(r)}
                       disabled={acting === r.conversation_id}
                       className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors disabled:opacity-40"
                     >
@@ -445,6 +462,35 @@ export default function AuditsToCallback() {
           })
         )}
       </div>
+
+      {rdvModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setRdvModal(null)}>
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 w-80" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-2 mb-1">
+              <Trophy size={16} className="text-emerald-400" />
+              <h3 className="font-bold">RDV pris</h3>
+            </div>
+            <p className="text-xs text-[var(--text-muted)] mb-4">Quand a lieu le RDV avec {rdvModal.row.agency_name} ?</p>
+            <input
+              type="datetime-local"
+              value={rdvModal.rdv_at}
+              onChange={e => setRdvModal(s => s ? { ...s, rdv_at: e.target.value } : s)}
+              className="w-full px-4 py-2.5 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] mb-4 focus:outline-none focus:border-[var(--accent)]"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => setRdvModal(null)}
+                className="flex-1 py-2.5 rounded-xl border border-[var(--border)] text-sm text-[var(--text-muted)] hover:bg-[var(--surface-hover)]"
+              >Annuler</button>
+              <button
+                onClick={confirmRdv}
+                disabled={!rdvModal.rdv_at}
+                className="flex-1 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600 disabled:opacity-40"
+              >Confirmer</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {recallModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setRecallModal(null)}>

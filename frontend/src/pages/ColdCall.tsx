@@ -56,6 +56,8 @@ export default function ColdCall() {
   const [streak, setStreak] = useState(0)
   const [showCallbackPicker, setShowCallbackPicker] = useState(false)
   const [callbackDate, setCallbackDate] = useState('')
+  const [showRdvPicker, setShowRdvPicker] = useState(false)
+  const [rdvAt, setRdvAt] = useState('')
   const [callNotes, setCallNotes] = useState('')
   const [transitioning, setTransitioning] = useState(false)
 
@@ -265,12 +267,16 @@ export default function ColdCall() {
 
   async function recordCall(result: CallResult) {
     if (!currentAgency) return
-    await supabase.from('agencies').update({
+    const update: Record<string, unknown> = {
       call_result: result, call_date: new Date().toISOString(),
       call_notes: callNotes || null,
       callback_date: result === 'rappeler' && callbackDate ? callbackDate : null,
       call_skipped_at: null,
-    }).eq('id', currentAgency.id)
+    }
+    if (result === 'rdv' && rdvAt) {
+      update.rdv_at = new Date(rdvAt).toISOString()
+    }
+    await supabase.from('agencies').update(update).eq('id', currentAgency.id)
 
     if (result === 'audit_a_envoyer') {
       // Crée ou MAJ une conversation pour qu'elle apparaisse dans /audits-to-send
@@ -319,6 +325,7 @@ export default function ColdCall() {
 
   async function advance() {
     setCallNotes(''); setCallbackDate(''); setShowCallbackPicker(false)
+    setRdvAt(''); setShowRdvPicker(false)
     setTransitioning(true)
     motRef.current = MOTIVATIONS[Math.floor(Math.random() * MOTIVATIONS.length)]
     const next = completed + 1
@@ -529,7 +536,11 @@ export default function ColdCall() {
         <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
           {RESULTS.map(r => (
             <button key={r.key}
-              onClick={() => r.key === 'rappeler' ? setShowCallbackPicker(true) : recordCall(r.key)}
+              onClick={() => {
+                if (r.key === 'rappeler') setShowCallbackPicker(true)
+                else if (r.key === 'rdv') setShowRdvPicker(true)
+                else recordCall(r.key)
+              }}
               className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-xs font-medium transition-all hover:border-[var(--accent)]/40 hover:bg-[var(--surface-hover)] ${r.badgeClass.split(' ')[1]}`}>
               {r.icon}
               {r.label}
@@ -544,6 +555,24 @@ export default function ColdCall() {
 
         {/* Motivation */}
         <p className="text-center text-xs text-[var(--text-muted)] mt-4">{motRef.current} — encore {remaining}</p>
+
+        {/* RDV modal */}
+        {showRdvPicker && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowRdvPicker(false)}>
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 w-80" onClick={e => e.stopPropagation()}>
+              <h3 className="font-bold mb-1 flex items-center gap-2"><Trophy size={16} className="text-emerald-400" /> RDV pris</h3>
+              <p className="text-xs text-[var(--text-muted)] mb-4">Quand a lieu le RDV (visio, meeting...) ?</p>
+              <input type="datetime-local" value={rdvAt} onChange={e => setRdvAt(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] mb-4 focus:outline-none focus:border-[var(--accent)]" />
+              <div className="flex gap-2">
+                <button onClick={() => setShowRdvPicker(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-[var(--border)] text-sm text-[var(--text-muted)] hover:bg-[var(--surface-hover)]">Annuler</button>
+                <button onClick={() => recordCall('rdv')} disabled={!rdvAt}
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600 disabled:opacity-40">Confirmer</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Callback modal */}
         {showCallbackPicker && (

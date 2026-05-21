@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
-import { Building2, BarChart3, Map, PhoneCall, MailQuestion, Activity, ClipboardList, Headset, Linkedin, FileText, Target, FileCheck, CalendarClock } from 'lucide-react'
+import { Building2, BarChart3, Map, PhoneCall, MailQuestion, Activity, ClipboardList, Headset, Linkedin, FileText, Target, FileCheck, CalendarClock, Trophy } from 'lucide-react'
 import Agencies from './pages/Agencies'
 import Dashboard from './pages/Dashboard'
 import ScanMap from './pages/ScanMap'
@@ -13,6 +13,7 @@ import Reports from './pages/Reports'
 import Habits from './pages/Habits'
 import AuditsToSend from './pages/AuditsToSend'
 import AuditsToCallback from './pages/AuditsToCallback'
+import Rdv from './pages/Rdv'
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
           <NavItem to="/cold-call" icon={<Headset size={18} />} label="Cold Call" />
           <NavItem to="/audits-to-send" icon={<FileCheck size={18} />} label="Réponses email" />
           <NavItem to="/audits-to-callback" icon={<CalendarClock size={18} />} label="Rappels audit" />
+          <NavItem to="/rdv" icon={<Trophy size={18} />} label="RDV pris" />
           <NavItem to="/linkedin" icon={<Linkedin size={18} />} label="LinkedIn" />
           <NavItem to="/reports" icon={<FileText size={18} />} label="Rapports" />
           <NavItem to="/habits" icon={<Target size={18} />} label="Habitudes" />
@@ -44,6 +46,7 @@ function App() {
             <Route path="/cold-call" element={<ColdCall />} />
             <Route path="/audits-to-send" element={<AuditsToSend />} />
             <Route path="/audits-to-callback" element={<AuditsToCallback />} />
+            <Route path="/rdv" element={<Rdv />} />
             <Route path="/linkedin" element={<LinkedInPage />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/habits" element={<Habits />} />
