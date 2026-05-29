@@ -358,9 +358,20 @@ export default function AuditsToSend() {
                       </button>
                     )}
                     {r.agency_email && (
-                      <span className="flex items-center gap-1.5 text-[var(--text-muted)]">
+                      <button
+                        onClick={() => copy(r.agency_email!, `email-${r.conversation_id}`)}
+                        className="group flex items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--text)]"
+                        title="Copier l'email"
+                      >
                         <Mail size={12} /> {r.agency_email}
-                      </span>
+                        <Copy
+                          size={11}
+                          className={copiedKey === `email-${r.conversation_id}` ? 'text-emerald-400' : 'opacity-40 group-hover:opacity-100 transition-opacity'}
+                        />
+                        {copiedKey === `email-${r.conversation_id}` && (
+                          <span className="text-[10px] text-emerald-400">copié</span>
+                        )}
+                      </button>
                     )}
                     {r.sender_email && (
                       <span className="flex items-center gap-1.5 text-blue-400">
