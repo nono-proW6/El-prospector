@@ -374,17 +374,15 @@ export default function AuditsToCallback() {
                       </div>
                     </div>
                   ) : r.call_notes ? (
-                    <div className="flex items-start gap-2 bg-amber-500/5 border border-amber-500/20 rounded-lg px-2.5 py-2 group">
+                    <button
+                      onClick={() => startEditNotes(r)}
+                      className="w-full flex items-start gap-2 bg-amber-500/5 border border-amber-500/20 rounded-lg px-2.5 py-2 text-left hover:bg-amber-500/10 transition-colors"
+                      title="Éditer la note"
+                    >
                       <StickyNote size={12} className="text-amber-400 mt-0.5 shrink-0" />
                       <p className="flex-1 text-xs text-amber-100/90 whitespace-pre-wrap break-words leading-relaxed">{r.call_notes}</p>
-                      <button
-                        onClick={() => startEditNotes(r)}
-                        className="text-amber-400/60 hover:text-amber-400 transition-colors shrink-0 opacity-0 group-hover:opacity-100"
-                        title="Éditer la note"
-                      >
-                        <Pencil size={12} />
-                      </button>
-                    </div>
+                      <Pencil size={12} className="text-amber-400/70 shrink-0 mt-0.5" />
+                    </button>
                   ) : (
                     <button
                       onClick={() => startEditNotes(r)}

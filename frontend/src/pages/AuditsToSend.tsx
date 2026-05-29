@@ -28,6 +28,11 @@ function coverSubject(ownerName: string | null, agencyName: string): string {
   return `Audit ${agencyName}`
 }
 
+function auditPrompt(agencyName: string, ownerName: string | null, city: string): string {
+  const owner = ownerName ? ` qui a normalement ${ownerName} en tant que gérant` : ''
+  return `lance un audit pour ${agencyName}${owner} et est situé à ${city}`
+}
+
 type Tab = 'audit_requested' | 'audit_sent' | 'audit_refused' | 'other'
 
 const TAB_CONFIG: Record<Tab, {
@@ -388,6 +393,14 @@ export default function AuditsToSend() {
                     )}
                     {showActions && (
                       <>
+                        <button
+                          onClick={() => copy(auditPrompt(r.agency_name, r.owner_name, r.agency_city), `prompt-${r.conversation_id}`)}
+                          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors"
+                          title="Copier le prompt à coller dans Claude pour générer l'audit"
+                        >
+                          <Copy size={12} />
+                          {copiedKey === `prompt-${r.conversation_id}` ? 'Prompt copié !' : 'Copier prompt audit'}
+                        </button>
                         <button
                           onClick={() => copy(coverSubject(r.owner_name, r.agency_name), `subject-${r.conversation_id}`)}
                           className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-[var(--surface-hover)] hover:bg-[var(--border)] transition-colors"
