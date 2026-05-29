@@ -6,30 +6,61 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
-function defaultCallbackDate(): string {
-  const d = new Date()
-  d.setDate(d.getDate() + 2)
-  return d.toISOString().split('T')[0]
+function addBusinessDays(from: Date, days: number): Date {
+  const d = new Date(from)
+  let added = 0
+  while (added < days) {
+    d.setDate(d.getDate() + 1)
+    const day = d.getDay()
+    if (day !== 0 && day !== 6) added++
+  }
+  return d
 }
 
-function coverMessage(ownerName: string | null): string {
-  const greeting = ownerName ? `Rebonjour ${ownerName}` : 'Rebonjour'
+function defaultCallbackDate(): string {
+  const d = addBusinessDays(new Date(), 2)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function formatCallbackDay(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  const day = date.getDay()
+  const isWeekend = day === 0 || day === 6
+  const formatted = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  return isWeekend ? `${formatted} ⚠️ week-end` : formatted
+}
+
+function fullOwnerName(firstName: string | null, lastName: string | null): string | null {
+  const parts = [firstName, lastName].filter(Boolean) as string[]
+  return parts.length ? parts.join(' ') : null
+}
+
+function coverMessage(firstName: string | null): string {
+  const greeting = firstName ? `Bonjour ${firstName}` : 'Bonjour'
   return `${greeting},
 
-Comme promis, voici l'audit de votre agence fait par mon agent IA (en pièce jointe), j'espère que vous apprécierez.
+Je vous envoie un audit de votre agence fait par un agent IA que je suis en train de construire, à partir de tout ce qu'il a vu de vous sur internet, je trouve ça assez fou !
 
-Je vous appelle dans 2-3 jours pour avoir votre retour !
+Et encore, l'audit n'est qu'un aperçu. Je bosse en ce moment avec un Arthurimmo pas loin de Toulouse sur quelque chose de bien plus large.
+
+Je vous appelle dans 2-3 jours pour avoir votre avis.
 
 Noam`
 }
 
-function coverSubject(ownerName: string | null, agencyName: string): string {
-  if (ownerName) return `Pour ${ownerName} — audit ${agencyName}`
-  return `Audit ${agencyName}`
+function coverSubject(firstName: string | null, lastName: string | null): string {
+  const full = fullOwnerName(firstName, lastName)
+  if (full) return `Pour ${full} — un agent IA est passé dans votre agence`
+  return `Un agent IA est passé dans votre agence`
 }
 
-function auditPrompt(agencyName: string, ownerName: string | null, city: string): string {
-  const owner = ownerName ? ` qui a normalement ${ownerName} en tant que gérant` : ''
+function auditPrompt(agencyName: string, firstName: string | null, lastName: string | null, city: string): string {
+  const full = fullOwnerName(firstName, lastName)
+  const owner = full ? ` qui a normalement ${full} en tant que gérant` : ''
   return `lance un audit pour ${agencyName}${owner} et est situé à ${city}`
 }
 
@@ -82,6 +113,8 @@ type Row = {
   agency_city: string
   agency_email: string | null
   owner_name: string | null
+  owner_first_name: string | null
+  owner_last_name: string | null
   manager_phone: string | null
   agency_phone: string | null
   last_inbound: string | null
@@ -128,7 +161,7 @@ export default function AuditsToSend() {
       .from('conversations')
       .select(`
         id, status, sender_email, created_at, agency_id,
-        agency:agencies!inner ( id, name, city, email, phone, manager_phone, owner_name )
+        agency:agencies!inner ( id, name, city, email, phone, manager_phone, owner_name, owner_first_name, owner_last_name )
       `)
       .in('status', TAB_CONFIG[activeTab].statuses)
       .order('created_at', { ascending: false })
@@ -162,7 +195,7 @@ export default function AuditsToSend() {
       sender_email: string | null
       created_at: string
       agency_id: string
-      agency: { id: string; name: string; city: string; email: string | null; phone: string | null; manager_phone: string | null; owner_name: string | null } | { id: string; name: string; city: string; email: string | null; phone: string | null; manager_phone: string | null; owner_name: string | null }[]
+      agency: { id: string; name: string; city: string; email: string | null; phone: string | null; manager_phone: string | null; owner_name: string | null; owner_first_name: string | null; owner_last_name: string | null } | { id: string; name: string; city: string; email: string | null; phone: string | null; manager_phone: string | null; owner_name: string | null; owner_first_name: string | null; owner_last_name: string | null }[]
     }
 
     const mapped: Row[] = (convs as unknown as RawConv[]).map(c => {
@@ -178,6 +211,8 @@ export default function AuditsToSend() {
         agency_city: agency?.city || '',
         agency_email: agency?.email || null,
         owner_name: agency?.owner_name || null,
+        owner_first_name: agency?.owner_first_name || null,
+        owner_last_name: agency?.owner_last_name || null,
         manager_phone: agency?.manager_phone || null,
         agency_phone: agency?.phone || null,
         last_inbound: last?.content || null,
@@ -405,7 +440,7 @@ export default function AuditsToSend() {
                     {showActions && (
                       <>
                         <button
-                          onClick={() => copy(auditPrompt(r.agency_name, r.owner_name, r.agency_city), `prompt-${r.conversation_id}`)}
+                          onClick={() => copy(auditPrompt(r.agency_name, r.owner_first_name, r.owner_last_name, r.agency_city), `prompt-${r.conversation_id}`)}
                           className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors"
                           title="Copier le prompt à coller dans Claude pour générer l'audit"
                         >
@@ -413,14 +448,14 @@ export default function AuditsToSend() {
                           {copiedKey === `prompt-${r.conversation_id}` ? 'Prompt copié !' : 'Copier prompt audit'}
                         </button>
                         <button
-                          onClick={() => copy(coverSubject(r.owner_name, r.agency_name), `subject-${r.conversation_id}`)}
+                          onClick={() => copy(coverSubject(r.owner_first_name, r.owner_last_name), `subject-${r.conversation_id}`)}
                           className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-[var(--surface-hover)] hover:bg-[var(--border)] transition-colors"
                         >
                           <Copy size={12} />
                           {copiedKey === `subject-${r.conversation_id}` ? 'Objet copié !' : 'Copier l\'objet'}
                         </button>
                         <button
-                          onClick={() => copy(coverMessage(r.owner_name), `cover-${r.conversation_id}`)}
+                          onClick={() => copy(coverMessage(r.owner_first_name), `cover-${r.conversation_id}`)}
                           className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-[var(--surface-hover)] hover:bg-[var(--border)] transition-colors"
                         >
                           <Copy size={12} />
@@ -466,13 +501,18 @@ export default function AuditsToSend() {
               <CalendarClock size={16} className="text-blue-400" />
               <h3 className="font-bold">Date de rappel</h3>
             </div>
-            <p className="text-xs text-[var(--text-muted)] mb-4">Quand rappeler après l'envoi de l'audit ?</p>
+            <p className="text-xs text-[var(--text-muted)] mb-3">Quand rappeler après l'envoi de l'audit ? Par défaut J+2 jours ouvrés — modifiable.</p>
             <input
               type="date"
               value={sendModal.callback_date}
               onChange={e => setSendModal(s => s ? { ...s, callback_date: e.target.value } : s)}
-              className="w-full px-4 py-2.5 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] mb-4 focus:outline-none focus:border-[var(--accent)]"
+              className="w-full px-4 py-2.5 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] mb-2 focus:outline-none focus:border-[var(--accent)]"
             />
+            {sendModal.callback_date && (
+              <p className="text-xs text-blue-400 mb-4">
+                Tu rappelleras le <strong>{formatCallbackDay(sendModal.callback_date)}</strong>
+              </p>
+            )}
             <div className="flex gap-2">
               <button
                 onClick={() => setSendModal(null)}
