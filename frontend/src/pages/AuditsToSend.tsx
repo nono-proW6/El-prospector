@@ -34,13 +34,28 @@ function formatCallbackDay(dateStr: string): string {
   return isWeekend ? `${formatted} ⚠️ week-end` : formatted
 }
 
-function fullOwnerName(firstName: string | null, lastName: string | null): string | null {
-  const parts = [firstName, lastName].filter(Boolean) as string[]
-  return parts.length ? parts.join(' ') : null
+function isCleanOwnerName(s: string | null): boolean {
+  if (!s) return false
+  if (s.length > 50) return false
+  return !/[()\/:—]|NON_TROUVE|co-gérant|cogérant/i.test(s)
 }
 
-function coverMessage(firstName: string | null): string {
-  const greeting = firstName ? `Bonjour ${firstName}` : 'Bonjour'
+function fullOwnerName(firstName: string | null, lastName: string | null, ownerName: string | null): string | null {
+  const parts = [firstName, lastName].filter(Boolean) as string[]
+  if (parts.length) return parts.join(' ')
+  if (isCleanOwnerName(ownerName)) return ownerName
+  return null
+}
+
+function firstNameOnly(firstName: string | null, ownerName: string | null): string | null {
+  if (firstName) return firstName
+  if (isCleanOwnerName(ownerName)) return ownerName!.split(/\s+/)[0]
+  return null
+}
+
+function coverMessage(firstName: string | null, ownerName: string | null): string {
+  const first = firstNameOnly(firstName, ownerName)
+  const greeting = first ? `Bonjour ${first}` : 'Bonjour'
   return `${greeting},
 
 Je vous envoie un audit de votre agence fait par un agent IA que je suis en train de construire, à partir de tout ce qu'il a vu de vous sur internet, je trouve ça assez fou !
@@ -52,14 +67,14 @@ Je vous appelle dans 2-3 jours pour avoir votre avis.
 Noam`
 }
 
-function coverSubject(firstName: string | null, lastName: string | null): string {
-  const full = fullOwnerName(firstName, lastName)
+function coverSubject(firstName: string | null, lastName: string | null, ownerName: string | null): string {
+  const full = fullOwnerName(firstName, lastName, ownerName)
   if (full) return `Pour ${full} — un agent IA est passé dans votre agence`
   return `Un agent IA est passé dans votre agence`
 }
 
-function auditPrompt(agencyName: string, firstName: string | null, lastName: string | null, city: string): string {
-  const full = fullOwnerName(firstName, lastName)
+function auditPrompt(agencyName: string, firstName: string | null, lastName: string | null, ownerName: string | null, city: string): string {
+  const full = fullOwnerName(firstName, lastName, ownerName)
   const owner = full ? ` qui a normalement ${full} en tant que gérant` : ''
   return `lance un audit pour ${agencyName}${owner} et est situé à ${city}`
 }
@@ -440,7 +455,7 @@ export default function AuditsToSend() {
                     {showActions && (
                       <>
                         <button
-                          onClick={() => copy(auditPrompt(r.agency_name, r.owner_first_name, r.owner_last_name, r.agency_city), `prompt-${r.conversation_id}`)}
+                          onClick={() => copy(auditPrompt(r.agency_name, r.owner_first_name, r.owner_last_name, r.owner_name, r.agency_city), `prompt-${r.conversation_id}`)}
                           className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors"
                           title="Copier le prompt à coller dans Claude pour générer l'audit"
                         >
@@ -448,14 +463,14 @@ export default function AuditsToSend() {
                           {copiedKey === `prompt-${r.conversation_id}` ? 'Prompt copié !' : 'Copier prompt audit'}
                         </button>
                         <button
-                          onClick={() => copy(coverSubject(r.owner_first_name, r.owner_last_name), `subject-${r.conversation_id}`)}
+                          onClick={() => copy(coverSubject(r.owner_first_name, r.owner_last_name, r.owner_name), `subject-${r.conversation_id}`)}
                           className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-[var(--surface-hover)] hover:bg-[var(--border)] transition-colors"
                         >
                           <Copy size={12} />
                           {copiedKey === `subject-${r.conversation_id}` ? 'Objet copié !' : 'Copier l\'objet'}
                         </button>
                         <button
-                          onClick={() => copy(coverMessage(r.owner_first_name), `cover-${r.conversation_id}`)}
+                          onClick={() => copy(coverMessage(r.owner_first_name, r.owner_name), `cover-${r.conversation_id}`)}
                           className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-[var(--surface-hover)] hover:bg-[var(--border)] transition-colors"
                         >
                           <Copy size={12} />
